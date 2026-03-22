@@ -51,8 +51,8 @@ static void setupColtIo() {
 	// engineConfiguration->fanPin = Gpio::Unassigned;
 
 	// D10 = A/C button
-	// engineConfiguration->acSwitch = Gpio::MM100_IN_BUTTON2;
-	// engineConfiguration->acSwitchMode = PI_PULLUP;
+	engineConfiguration->acSwitch = Gpio::MM100_IN_BUTTON2;
+	//engineConfiguration->acSwitchMode = PI_PULLUP;
 
 	// Clutch later invullen als je de definitieve pinnaam hier ook direct wilt zetten
 	// engineConfiguration->clutchDownPin = ...;
@@ -179,4 +179,34 @@ void setup_custom_board_overrides() {
 	custom_board_ConfigOverrides = colt_boardConfigOverrides;
 	custom_board_periodicSlowCallback = colt_slowCallback;
 	custom_board_periodicFastCallback = colt_fastCallback;
+}
+
+Gpio getWarningLedPin() {
+	return Gpio::Unassigned;
+}
+
+Gpio getCommsLedPin() {
+	return Gpio::Unassigned;
+}
+
+Gpio getRunningLedPin() {
+	return Gpio::Unassigned;
+}
+
+void setHellenCan2() {
+}
+
+void setHellenMegaEnPin(bool) {
+}
+
+void setHellenVbatt() {
+}
+
+void hellenMegaSdWithAccelerometer() {
+}
+
+void setHellenCan() {
+}
+
+void hellenWbo() {
 }
