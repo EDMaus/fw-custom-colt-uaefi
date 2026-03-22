@@ -51,8 +51,8 @@ static void setupColtIo() {
 	// engineConfiguration->fanPin = Gpio::Unassigned;
 
 	// D10 = A/C button
-	engineConfiguration->acSwitch = Gpio::MM100_IN_BUTTON2;
-	engineConfiguration->acSwitchMode = PI_PULLUP;
+	// engineConfiguration->acSwitch = Gpio::MM100_IN_BUTTON2;
+	// engineConfiguration->acSwitchMode = PI_PULLUP;
 
 	// Clutch later invullen als je de definitieve pinnaam hier ook direct wilt zetten
 	// engineConfiguration->clutchDownPin = ...;
@@ -95,7 +95,7 @@ static void setupColtEngine() {
 	engineConfiguration->injectionMode = IM_SEQUENTIAL;
 	engineConfiguration->ignitionMode = IM_INDIVIDUAL_COILS;
 
-	setAlgorithm(LM_SPEED_DENSITY);
+	setAlgorithm(engine_load_mode_e::LM_SPEED_DENSITY);
 	engineConfiguration->injectorCompensationMode = ICM_FixedRailPressure;
 
 	engineConfiguration->displayLogicLevelsInEngineSniffer = true;
