@@ -51,7 +51,7 @@ static void setupColtIo() {
 	// engineConfiguration->fanPin = Gpio::Unassigned;
 
 	// D10 = A/C button
-	engineConfiguration->acSwitch = Gpio::MM100_IN_BUTTON2;
+	//engineConfiguration->acSwitch = Gpio::MM100_IN_BUTTON2;
 	//engineConfiguration->acSwitchMode = PI_PULLUP;
 
 	// Clutch later invullen als je de definitieve pinnaam hier ook direct wilt zetten
