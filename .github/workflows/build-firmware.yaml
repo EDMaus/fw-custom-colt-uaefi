@@ -27,8 +27,9 @@ jobs:
 
       - uses: ./ext/rusefi/.github/workflows/custom-board-build
         with:
+          meta_info: boards/uaefi_pro/meta-info.env
           new_tag: ${{ steps.set-variables.outputs.release_date }}
-          artifacts: bin srec hex list map elf bundle autoupdate
+          artifacts: bin srec hex list map elf bundle autoupdate bootloader
           uploads: ini
           push: ${{ steps.set-variables.outputs.push }}
           run_simulator: ${{ steps.set-variables.outputs.sim }}
