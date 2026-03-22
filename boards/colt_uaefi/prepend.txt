@@ -1,0 +1,8 @@
+; boards/colt_uaefi/prepend.txt
+;
+; Board-specific declarative config
+; Houd dit simpel. Complexe logica hoort in C++.
+
+; Voorbeelden / placeholders:
+; set engineSnifferRpmThreshold 0
+; set debugMode 0
