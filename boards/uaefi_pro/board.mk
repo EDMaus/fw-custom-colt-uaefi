@@ -1,4 +1,4 @@
-# boards/colt_uaefi/board.mk
+# boards/uaefi_pro/board.mk
 
 # Board-local source files
 BOARDCPPSRC += $(BOARD_DIR)/board_configuration.cpp

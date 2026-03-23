@@ -1,4 +1,4 @@
-// boards/colt_uaefi/colt_can.h
+// boards/uaefi_pro/colt_can.h
 #pragma once
 
 #include <stdint.h>

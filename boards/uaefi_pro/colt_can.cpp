@@ -1,4 +1,4 @@
-// boards/colt_uaefi/colt_can.cpp
+// boards/uaefi_pro/colt_can.cpp
 
 #include "pch.h"
 #include "colt_can.h"
