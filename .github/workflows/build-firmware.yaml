@@ -25,6 +25,17 @@ jobs:
           echo 'push=false' >> $GITHUB_OUTPUT
           echo 'sim=false' >> $GITHUB_OUTPUT
 
+      - name: Debug board_configuration
+        run: |
+          echo "HEAD SHA:"
+          git rev-parse HEAD
+          echo "---- board_configuration.cpp lines 45-60 ----"
+          sed -n '45,60p' boards/uaefi_pro/board_configuration.cpp
+          echo "---- grep acSwitch ----"
+          grep -n "acSwitch" boards/uaefi_pro/board_configuration.cpp || true
+          echo "---- grep MM100_IN_BUTTON2 in repo ----"
+          grep -R -n "MM100_IN_BUTTON2" . || true
+
       - uses: ./ext/rusefi/.github/workflows/custom-board-build
         with:
           meta_info: boards/uaefi_pro/meta-info.env
@@ -43,13 +54,77 @@ jobs:
           RUSEFI_SSH_PASS: ${{ secrets.RUSEFI_SSH_PASS }}
           ADDITIONAL_ENV: ${{ secrets.ADDITIONAL_ENV }}
 
-          - name: Debug board_configuration
-  run: |
-    echo "HEAD SHA:"
-    git rev-parse HEAD
-    echo "---- board_configuration.cpp lines 45-60 ----"
-    sed -n '45,60p' boards/uaefi_pro/board_configuration.cpp
-    echo "---- grep acSwitch ----"
-    grep -n "acSwitch" boards/uaefi_pro/board_configuration.cpp || true
-    echo "---- grep MM100_IN_BUTTON2 in repo ----"
-    grep -R -n "MM100_IN_BUTTON2" . || true
+      - name: Build fixed OpenBLT update SREC from full SREC
+        shell: bash
+        run: |
+          python3 - << 'PY'
+          from pathlib import Path
+
+          START_ADDR = 0x08008000
+
+          candidates = list(Path(".").rglob("rusefi.srec"))
+          if not candidates:
+              raise SystemExit("No rusefi.srec found in workspace")
+
+          src = max(candidates, key=lambda p: p.stat().st_mtime)
+          dst = Path("rusefi_update_uaefi_pro.srec")
+
+          def addr_len(rec_type: str) -> int:
+              return {"1": 2, "2": 3, "3": 4}[rec_type]
+
+          kept = 0
+          with src.open("r", encoding="ascii") as fin, dst.open("w", encoding="ascii", newline="\n") as fout:
+              for line in fin:
+                  line = line.strip()
+                  if not line:
+                      continue
+
+                  if not line.startswith("S"):
+                      continue
+
+                  rec_type = line[1]
+
+                  if rec_type not in {"1", "2", "3"}:
+                      fout.write(line + "\n")
+                      continue
+
+                  addr_bytes = addr_len(rec_type)
+                  addr_hex_len = addr_bytes * 2
+                  addr = int(line[4:4 + addr_hex_len], 16)
+
+                  if addr >= START_ADDR:
+                      fout.write(line + "\n")
+                      kept += 1
+
+          if kept == 0:
+              raise SystemExit("No SREC data kept - wrong source file or address range")
+
+          print(f"Source: {src}")
+          print(f"Written: {dst}")
+          PY
+
+      - name: Verify fixed OpenBLT update SREC
+        shell: bash
+        run: |
+          python3 - << 'PY'
+          from pathlib import Path
+
+          p = Path("rusefi_update_uaefi_pro.srec")
+          for line in p.read_text(encoding="ascii").splitlines():
+              if line.startswith(("S1", "S2", "S3")):
+                  t = line[1]
+                  n = {"1": 4, "2": 6, "3": 8}[t]
+                  addr = int(line[4:4+n], 16)
+                  print(f"first address: 0x{addr:08x}")
+                  if addr != 0x08008000:
+                      raise SystemExit("Update SREC does not start at 0x08008000")
+                  break
+          else:
+              raise SystemExit("No data records found in update SREC")
+          PY
+
+      - name: Upload fixed OpenBLT update SREC
+        uses: actions/upload-artifact@v4
+        with:
+          name: rusefi_update_uaefi_pro_fixed
+          path: rusefi_update_uaefi_pro.srec
