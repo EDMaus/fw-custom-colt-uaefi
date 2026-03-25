@@ -285,8 +285,8 @@ void processColtCanTx() {
 		buildFrame308(data);
 		sendCanFrame(0x308, data, 8);
 
-		buildFrame312(data);
-		sendCanFrame(0x312, data, 8);
+		//buildFrame312(data);
+		//sendCanFrame(0x312, data, 8);
 	}
 
 	if ((nowMs - last100msTx) >= 100) {
@@ -305,8 +305,8 @@ void processColtCanTx() {
 		buildFrame423(data6);
 		sendCanFrame(0x423, data6, 6);
 
-		buildFrame608(data8);
-		sendCanFrame(0x608, data8, 8);
+		//buildFrame608(data8);
+		//sendCanFrame(0x608, data8, 8);
 
 		buildFrame584(data1);
 		sendCanFrame(0x584, data1, 1);
