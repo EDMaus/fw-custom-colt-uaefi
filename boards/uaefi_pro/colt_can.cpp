@@ -70,10 +70,6 @@ static bool getClutchPressed() {
 	return g_colt.clutchPressed;
 }
 
-static bool getBrakePressed() {
-	return g_colt.brakePressed;
-}
-
 static bool getAcRequest() {
 	return g_colt.acRequest;
 }
@@ -175,19 +171,6 @@ static void buildFrame308(uint8_t* d) {
 	}
 }
 
-// 0x312: keep your earlier candidate path, but more structured
-static void buildFrame312(uint8_t* d) {
-	memset(d, 0, 8);
-
-	const int rpm = getCurrentRpm();
-	const int clt = getCoolantTempC();
-
-	// still experimental
-	d[0] = (uint8_t)(rpm & 0xFF);
-	d[1] = (uint8_t)((rpm >> 8) & 0xFF);
-	d[2] = clampToU8(clt + 40);
-}
-
 // 0x408: state frame from logs
 static void buildFrame408(uint8_t* d) {
 	memset(d, 0, 8);
@@ -236,12 +219,6 @@ static void buildFrame423(uint8_t* d) {
 // 0x584: keepalive
 static void buildFrame584(uint8_t* d) {
 	d[0] = 0xC0;
-}
-
-// 0x608: coolant temp candidate you already used
-static void buildFrame608(uint8_t* d) {
-	memset(d, 0, 8);
-	d[0] = clampToU8(getCoolantTempC() + 40);
 }
 
 // ----------------------------------------------------
