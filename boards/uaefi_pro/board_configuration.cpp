@@ -198,3 +198,17 @@ void setHellenCan() {
 
 void hellenWbo() {
 }
+
+#ifndef EFI_BOOTLOADER
+Gpio getWarningLedPin() {
+	return Gpio::Unassigned;
+}
+
+Gpio getCommsLedPin() {
+	return Gpio::Unassigned;
+}
+
+Gpio getRunningLedPin() {
+	return Gpio::Unassigned;
+}
+#endif
