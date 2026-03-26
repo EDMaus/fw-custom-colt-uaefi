@@ -181,18 +181,6 @@ void setup_custom_board_overrides() {
 	custom_board_periodicFastCallback = colt_fastCallback;
 }
 
-Gpio getWarningLedPin() {
-	return Gpio::Unassigned;
-}
-
-Gpio getCommsLedPin() {
-	return Gpio::Unassigned;
-}
-
-Gpio getRunningLedPin() {
-	return Gpio::Unassigned;
-}
-
 void setHellenCan2() {
 }
 
