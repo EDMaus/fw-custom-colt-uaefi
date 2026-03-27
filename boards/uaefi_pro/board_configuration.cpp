@@ -32,19 +32,26 @@ static void setupColtSensorInputs() {
 	engineConfiguration->clt.adcChannel = MM100_IN_CLT_ANALOG;
 	engineConfiguration->iat.adcChannel = MM100_IN_IAT_ANALOG;
 
-	// PPS, later activeren als je hem nu al definitief wilt meenemen
-	// setPPSInputs(MM100_IN_PPS_ANALOG, MM100_IN_AUX2_ANALOG);
+
+	setPPSInputs(MM100_IN_PPS_ANALOG, MM100_IN_AUX2_ANALOG);
 
 	// hall1 = cam, hall2 = crank
 	engineConfiguration->camInputs[0] = Gpio::MM100_IN_D1;        // PE12
 	engineConfiguration->triggerInputPins[0] = Gpio::MM100_IN_D2; // PE13
 
-	engineConfiguration->vehicleSpeedSensorInputPin = Gpio::MM100_IN_D3;
+	engineConfiguration->vehicleSpeedSensorInputPin = Gpio::Unassigned;
 }
 
 static void setupColtIo() {
 	engineConfiguration->mainRelayPin = Gpio::MM100_IGN7;     // B9 / OUT_LS_HOT1
 	engineConfiguration->fuelPumpPin = Gpio::MM100_OUT_PWM2;  // B16 / OUT_LS4
+
+	// OEM-style start request + starter relay
+	engineConfiguration->startStopButtonPin = Gpio::MM100_IN_VSS;   // D5 / IN_FLEX, vanaf OEM ECU pin 80 (ST)
+	engineConfiguration->startStopButtonMode = PI_DEFAULT;
+	engineConfiguration->startRequestPinInverted = false;
+
+	engineConfiguration->starterControlPin = Gpio::MM100_IGN8;       // B8 / OUT_LS_HOT2, naar OEM ECU pin 125
 
 	// fan via CAN -> ETACS, dus niet lokaal schakelen
 	// laat weg of unassign alleen als jouw tree dat accepteert
