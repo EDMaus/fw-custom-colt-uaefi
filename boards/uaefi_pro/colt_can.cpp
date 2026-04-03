@@ -66,11 +66,6 @@ static bool getEngineRunning() {
 	return getCurrentRpm() > 400;
 }
 
-static bool getClutchPressed() {
-	// TODO: vervang door echte bron
-	return g_colt.clutchPressed;
-}
-
 static bool getAcRequest() {
 	return g_colt.acRequest;
 }
