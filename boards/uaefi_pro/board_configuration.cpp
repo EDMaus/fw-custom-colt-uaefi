@@ -72,9 +72,10 @@ static void setupColtCan() {
 
 	setHellenCan2();
 
-	engineConfiguration->enableVerboseCanTx = true;
+	engineConfiguration->enableVerboseCanTx = false;
 	// optioneel:
-	// engineConfiguration->canBaudRate = B500KBPS;
+	 engineConfiguration->canBaudRate = B500KBPS;
+
 }
 
 static void setupColtDbw() {

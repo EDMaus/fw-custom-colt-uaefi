@@ -6,6 +6,7 @@
 #include "sensor.h"
 
 static uint32_t last10msTx = 0;
+static uint32_t last14msTx = 0;
 static uint32_t last20msTx = 0;
 static uint32_t last100msTx = 0;
 
@@ -74,6 +75,30 @@ static bool getAcRequest() {
 	return g_colt.acRequest;
 }
 
+static bool getBatteryWarning() {
+	const float vbatt = Sensor::getOrZero(SensorType::BatteryVoltage);
+	return vbatt > 1.0f && vbatt < 11.8f;
+}
+
+static bool getMilWarning() {
+	// TODO later koppelen aan echte MIL / CEL status
+	return false;
+}
+
+static bool getOilWarning() {
+	// TODO later koppelen aan echte oliedruk/engine protect logica
+	return false;
+}
+
+static uint16_t encodeClusterRpm308(int rpm) {
+	if (rpm < 0) rpm = 0;
+	if (rpm > 8000) rpm = 8000;
+
+	// Bewezen op bench:
+	// raw = rpm * 1024 / 1000
+	return (uint16_t)((rpm * 1024) / 1000);
+}
+
 static void sendCanFrame(uint32_t id, const uint8_t* data, uint8_t dlc) {
 	CanTxMessage msg(CanCategory::NBC, id, dlc, COLT_CAN_BUS, false);
 
@@ -81,8 +106,7 @@ static void sendCanFrame(uint32_t id, const uint8_t* data, uint8_t dlc) {
 		msg[i] = data[i];
 	}
 
-	// Bij deze API is de constructor/object lifetime normaal voldoende.
-	// Geen extra canTransmit() call hier.
+	// Constructor/object lifetime doet de TX
 }
 
 // ----------------------------------------------------
@@ -152,23 +176,37 @@ static void buildFrame212(uint8_t* d) {
 	d[5] = scaleTpsTo212Byte5(getTpsPercent());
 }
 
-// 0x308: clutch bit in byte0 bit7 from logs
+// 0x308: bewezen cluster frame
+// byte1-2 big-endian = RPM
+// byte3 bit1 = MIL
+// byte3 bit2 = oil lamp
+// byte4 bit4 = battery lamp
 static void buildFrame308(uint8_t* d) {
 	memset(d, 0, 8);
 
-	// baseline from logs
-	d[0] = 0x00;
-	d[1] = 0x00;
-	d[2] = 0x00;
-	d[3] = 0x04;
-	d[4] = 0x00;
-	d[5] = 0x35;
-	d[6] = 0xFF;
-	d[7] = 0x00;
+	const int rpm = getCurrentRpm();
+	const uint16_t rawRpm = encodeClusterRpm308(rpm);
 
-	if (getClutchPressed()) {
-		d[0] |= 0x80;
+	d[0] = 0x00;
+	d[1] = (rawRpm >> 8) & 0xFF;
+	d[2] = rawRpm & 0xFF;
+
+	d[3] = 0x00;
+	if (getMilWarning()) {
+		d[3] |= 0x02;
 	}
+	if (getOilWarning()) {
+		d[3] |= 0x04;
+	}
+
+	d[4] = 0x00;
+	if (getBatteryWarning()) {
+		d[4] |= 0x10;
+	}
+
+	d[5] = 0x00;
+	d[6] = 0x80;
+	d[7] = 0x00;
 }
 
 // 0x408: state frame from logs
@@ -227,6 +265,7 @@ static void buildFrame584(uint8_t* d) {
 
 void initColtCan() {
 	last10msTx = 0;
+	last14msTx = 0;
 	last20msTx = 0;
 	last100msTx = 0;
 }
@@ -248,6 +287,15 @@ void processColtCanTx() {
 		sendCanFrame(0x0C0, data, 8);
 	}
 
+	if ((nowMs - last14msTx) >= 14) {
+		last14msTx = nowMs;
+
+		uint8_t data[8];
+
+		buildFrame308(data);
+		sendCanFrame(0x308, data, 8);
+	}
+
 	if ((nowMs - last20msTx) >= 20) {
 		last20msTx = nowMs;
 
@@ -258,9 +306,6 @@ void processColtCanTx() {
 
 		buildFrame212(data);
 		sendCanFrame(0x212, data, 8);
-
-		buildFrame308(data);
-		sendCanFrame(0x308, data, 8);
 
 		//buildFrame312(data);
 		//sendCanFrame(0x312, data, 8);
@@ -282,34 +327,20 @@ void processColtCanTx() {
 		buildFrame423(data6);
 		sendCanFrame(0x423, data6, 6);
 
-		//buildFrame608(data8);
-		//sendCanFrame(0x608, data8, 8);
-
 		buildFrame584(data1);
 		sendCanFrame(0x584, data1, 1);
 	}
 }
 
 void processColtCanRx(uint32_t id, const uint8_t* data, uint8_t dlc) {
-	// Op basis van jouw gevonden richting:
-	// 0x443 = AC -> engine
-	// 0x300 = ASC -> engine
-	// 0x200 = ABS -> engine
-	// 0x412 = meter -> engine
-
 	switch (id) {
 		case 0x200:
-			// ABS -> engine
-			// voorlopige eenvoudige interpretatie
-			// later echte bit/byte mapping uitbreiden
 			if (dlc > 1) {
-				// brake state bleef in logs rond byte1 verschillen
 				g_colt.brakePressed = ((data[1] & 0x05) == 0x05);
 			}
 			break;
 
 		case 0x443:
-			// AC -> engine
 			if (dlc > 0) {
 				g_colt.acRequest = (data[0] & 0x01) != 0;
 			}
@@ -317,12 +348,10 @@ void processColtCanRx(uint32_t id, const uint8_t* data, uint8_t dlc) {
 
 		case 0x300:
 			// ASC -> engine
-			// voorlopig geen harde decode
 			break;
 
 		case 0x412:
 			// meter -> engine
-			// voorlopig geen harde decode
 			break;
 
 		default:
