@@ -9,34 +9,56 @@ on:
 jobs:
   build-firmware:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
         with:
           submodules: true
 
       - name: Set run variables
         id: set-variables
+        shell: bash
         run: |
           if [ "${{ github.event_name }}" = "schedule" ]; then
-            echo "release_date=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
+            echo "release_date=$(date +'%Y-%m-%d')" >> "$GITHUB_ENV"
+            echo "release_date=$(date +'%Y-%m-%d')" >> "$GITHUB_OUTPUT"
+          else
+            echo "release_date=" >> "$GITHUB_OUTPUT"
           fi
 
-          echo 'extra_makefile_targets=build_both_bundles' >> $GITHUB_OUTPUT
-          echo 'push=false' >> $GITHUB_OUTPUT
-          echo 'sim=false' >> $GITHUB_OUTPUT
+          echo "push=false" >> "$GITHUB_OUTPUT"
+          echo "sim=false" >> "$GITHUB_OUTPUT"
 
-      - name: Debug board_configuration
+      - name: Debug board configuration
+        shell: bash
         run: |
           echo "HEAD SHA:"
           git rev-parse HEAD
-          echo "---- board_configuration.cpp lines 45-60 ----"
-          sed -n '45,60p' boards/uaefi_pro/board_configuration.cpp
+          echo
+
+          echo "Submodule status:"
+          git submodule status
+          echo
+
+          echo "---- boards/uaefi_pro/board_configuration.cpp lines 1-120 ----"
+          sed -n '1,120p' boards/uaefi_pro/board_configuration.cpp
+          echo
+
           echo "---- grep acSwitch ----"
-          grep -n "acSwitch" boards/uaefi_pro/board_configuration.cpp || true
+          grep -R -n "acSwitch" boards/uaefi_pro/board_configuration.cpp || true
+          echo
+
+          echo "---- grep setTPS1Inputs ----"
+          grep -R -n "setTPS1Inputs" boards/uaefi_pro/board_configuration.cpp || true
+          echo
+
           echo "---- grep MM100_IN_BUTTON2 in repo ----"
           grep -R -n "MM100_IN_BUTTON2" . || true
+          echo
 
-      - uses: ./ext/rusefi/.github/workflows/custom-board-build
+      - name: Build custom board firmware
+        uses: ./ext/rusefi/.github/workflows/custom-board-build
         with:
           meta_info: boards/uaefi_pro/meta-info.env
           new_tag: ${{ steps.set-variables.outputs.release_date }}
@@ -44,7 +66,6 @@ jobs:
           uploads: ini
           push: ${{ steps.set-variables.outputs.push }}
           run_simulator: ${{ steps.set-variables.outputs.sim }}
-          extra_makefile_targets: ${{ steps.set-variables.outputs.extra_makefile_targets }}
           MY_REPO_PAT: ${{ secrets.MY_REPO_PAT }}
           RUSEFI_ONLINE_FTP_USER: ${{ secrets.RUSEFI_ONLINE_FTP_USER }}
           RUSEFI_ONLINE_FTP_PASS: ${{ secrets.RUSEFI_ONLINE_FTP_PASS }}
@@ -54,6 +75,64 @@ jobs:
           RUSEFI_SSH_PASS: ${{ secrets.RUSEFI_SSH_PASS }}
           ADDITIONAL_ENV: ${{ secrets.ADDITIONAL_ENV }}
 
+      - name: Generate firmware file reports
+        shell: bash
+        run: |
+          {
+            echo "---- All SREC files ----"
+            find . -type f \( -name "*.srec" -o -name "*.SREC" \) -print -exec ls -lh {} \;
+            echo
+            echo "---- All BIN files ----"
+            find . -type f \( -name "*.bin" -o -name "*.BIN" \) -print -exec ls -lh {} \;
+            echo
+            echo "---- All ELF files ----"
+            find . -type f \( -name "*.elf" -o -name "*.ELF" \) -print -exec ls -lh {} \;
+            echo
+            echo "---- All MAP files ----"
+            find . -type f \( -name "*.map" -o -name "*.MAP" \) -print -exec ls -lh {} \;
+            echo
+          } | tee firmware_file_report.txt
+
+      - name: Upload firmware file report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: firmware-file-report
+          path: firmware_file_report.txt
+
+      - name: Locate full firmware SREC
+        id: locate-srec
+        shell: bash
+        run: |
+          python3 - << 'PY'
+          from pathlib import Path
+          import sys
+
+          candidates = sorted(Path(".").rglob("rusefi.srec"))
+
+          print("Candidates named exactly 'rusefi.srec':")
+          for c in candidates:
+              print(f" - {c} ({c.stat().st_size} bytes)")
+
+          if len(candidates) == 0:
+              print("ERROR: No rusefi.srec found in workspace", file=sys.stderr)
+              sys.exit(1)
+
+          if len(candidates) > 1:
+              print("ERROR: Multiple rusefi.srec files found. Refusing to guess.", file=sys.stderr)
+              sys.exit(2)
+
+          chosen = candidates[0]
+          print(f"Chosen source SREC: {chosen}")
+
+          with open(Path("/tmp/full_srec_path.txt"), "w", encoding="utf-8") as f:
+              f.write(str(chosen))
+          PY
+
+          FULL_SREC_PATH="$(cat /tmp/full_srec_path.txt)"
+          echo "full_srec_path=$FULL_SREC_PATH" >> "$GITHUB_OUTPUT"
+          echo "Using source SREC: $FULL_SREC_PATH"
+
       - name: Build fixed OpenBLT update SREC from full SREC
         shell: bash
         run: |
@@ -61,18 +140,18 @@ jobs:
           from pathlib import Path
 
           START_ADDR = 0x08008000
-
-          candidates = list(Path(".").rglob("rusefi.srec"))
-          if not candidates:
-              raise SystemExit("No rusefi.srec found in workspace")
-
-          src = max(candidates, key=lambda p: p.stat().st_mtime)
+          src = Path("${{ steps.locate-srec.outputs.full_srec_path }}")
           dst = Path("rusefi_update_uaefi_pro.srec")
+
+          if not src.exists():
+              raise SystemExit(f"Source SREC not found: {src}")
 
           def addr_len(rec_type: str) -> int:
               return {"1": 2, "2": 3, "3": 4}[rec_type]
 
           kept = 0
+          total_data_records = 0
+
           with src.open("r", encoding="ascii") as fin, dst.open("w", encoding="ascii", newline="\n") as fout:
               for line in fin:
                   line = line.strip()
@@ -88,6 +167,8 @@ jobs:
                       fout.write(line + "\n")
                       continue
 
+                  total_data_records += 1
+
                   addr_bytes = addr_len(rec_type)
                   addr_hex_len = addr_bytes * 2
                   addr = int(line[4:4 + addr_hex_len], 16)
@@ -96,11 +177,18 @@ jobs:
                       fout.write(line + "\n")
                       kept += 1
 
+          if total_data_records == 0:
+              raise SystemExit("No S1/S2/S3 data records found in source SREC")
+
           if kept == 0:
               raise SystemExit("No SREC data kept - wrong source file or address range")
 
           print(f"Source: {src}")
           print(f"Written: {dst}")
+          print(f"Total data records: {total_data_records}")
+          print(f"Kept data records: {kept}")
+          print(f"Source size: {src.stat().st_size} bytes")
+          print(f"Output size: {dst.stat().st_size} bytes")
           PY
 
       - name: Verify fixed OpenBLT update SREC
@@ -110,17 +198,27 @@ jobs:
           from pathlib import Path
 
           p = Path("rusefi_update_uaefi_pro.srec")
+          if not p.exists():
+              raise SystemExit("Output SREC not found")
+
+          first_addr = None
+
           for line in p.read_text(encoding="ascii").splitlines():
               if line.startswith(("S1", "S2", "S3")):
                   t = line[1]
                   n = {"1": 4, "2": 6, "3": 8}[t]
                   addr = int(line[4:4+n], 16)
-                  print(f"first address: 0x{addr:08x}")
-                  if addr != 0x08008000:
-                      raise SystemExit("Update SREC does not start at 0x08008000")
+                  first_addr = addr
+                  print(f"First data record address: 0x{addr:08X}")
                   break
-          else:
+
+          if first_addr is None:
               raise SystemExit("No data records found in update SREC")
+
+          if first_addr != 0x08008000:
+              raise SystemExit(f"Update SREC does not start at 0x08008000, got 0x{first_addr:08X}")
+
+          print(f"Verified output size: {p.stat().st_size} bytes")
           PY
 
       - name: Upload fixed OpenBLT update SREC
@@ -128,3 +226,12 @@ jobs:
         with:
           name: rusefi_update_uaefi_pro_fixed
           path: rusefi_update_uaefi_pro.srec
+
+      - name: Upload debug file lists
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: firmware-file-scan
+          path: |
+            .
+          if-no-files-found: warn
