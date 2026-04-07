@@ -28,11 +28,13 @@ static void setIgnitionPins() {
 }
 
 static void setupColtSensorInputs() {
-	engineConfiguration->tps1_1AdcChannel = MM100_IN_TPS_ANALOG;
+	// ETB throttle body position sensors
+	setTPS1Inputs(MM100_IN_TPS_ANALOG, MM100_IN_AUX1_ANALOG);
+
 	engineConfiguration->clt.adcChannel = MM100_IN_CLT_ANALOG;
 	engineConfiguration->iat.adcChannel = MM100_IN_IAT_ANALOG;
 
-
+	// Pedal position sensors
 	setPPSInputs(MM100_IN_PPS_ANALOG, MM100_IN_AUX2_ANALOG);
 
 	// hall1 = cam, hall2 = crank
