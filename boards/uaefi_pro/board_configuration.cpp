@@ -215,8 +215,6 @@ int getBoardMetaDcOutputsCount() {
 	return 2;
 }
 
-static void colt_slowCallback() {
-}
 //static void colt_slowCallback() {
 //#ifndef EFI_BOOTLOADER
 	//extern AemXSeriesWideband aem1;
@@ -234,7 +232,6 @@ static void colt_slowCallback() {
 void setup_custom_board_overrides() {
 	custom_board_DefaultConfiguration = colt_boardDefaultConfiguration;
 	custom_board_ConfigOverrides = colt_boardConfigOverrides;
-	//custom_board_periodicSlowCallback = colt_slowCallback;
 	custom_board_periodicFastCallback = colt_fastCallback;
 }
 
