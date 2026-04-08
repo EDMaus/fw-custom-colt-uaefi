@@ -58,17 +58,12 @@ static void setupDefaultSensorInputs() {
 }
 
 static void colt_boardConfigOverrides() {
-	engineConfiguration->vrThreshold[0].pin = Gpio::MM100_OUT_PWM6;
-	setDefaultHellenAtPullUps();
-}
-
-	engineConfiguration->vrThreshold[0].pin = Gpio::MM100_OUT_PWM6;
-
-	setDefaultHellenAtPullUps();
+        engineConfiguration->vrThreshold[0].pin = Gpio::MM100_OUT_PWM6;
+        setDefaultHellenAtPullUps();
 }
 
 bool validateBoardConfig() {
-	return true;
+        return true;
 }
 
 static void setUaefiDefaultETBPins() {
