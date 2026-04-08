@@ -274,4 +274,3 @@ Gpio getCommsLedPin() {
 Gpio getRunningLedPin() {
 	return Gpio::Unassigned;
 }
-#endif
