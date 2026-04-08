@@ -229,9 +229,7 @@ static void colt_slowCallback() {
 //#endif // EFI_BOOTLOADER
 //}
 
-static void colt_fastCallback() {
-	processColtCanTx();
-}
+
 
 void setup_custom_board_overrides() {
 	custom_board_DefaultConfiguration = colt_boardDefaultConfiguration;
