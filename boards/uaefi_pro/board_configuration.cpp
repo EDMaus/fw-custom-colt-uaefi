@@ -163,7 +163,6 @@ static void colt_boardDefaultConfiguration() {
 #endif // EFI_BOOTLOADER
 
 	setTPS1Calibration(100, 650);
-	hellenWbo();
 
 	// Colt CAN init
 	initColtCan();
