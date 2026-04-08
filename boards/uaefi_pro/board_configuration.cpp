@@ -58,22 +58,16 @@ static void setupDefaultSensorInputs() {
 }
 
 static void colt_boardConfigOverrides() {
-	setHellenMegaEnPin();
-	setHellenVbatt();
-
-	hellenMegaSdWithAccelerometer();
+	engineConfiguration->vrThreshold[0].pin = Gpio::MM100_OUT_PWM6;
+	setDefaultHellenAtPullUps();
+}
 
 	engineConfiguration->vrThreshold[0].pin = Gpio::MM100_OUT_PWM6;
-
-	setHellenCan();
 
 	setDefaultHellenAtPullUps();
 }
 
 bool validateBoardConfig() {
-	if (engineConfiguration->can2RxPin != Gpio::B12) {
-		setHellenCan2();
-	}
 	return true;
 }
 
@@ -116,8 +110,6 @@ static void setupColtIo() {
 static void setupColtCan() {
 	engineConfiguration->canTxPin = Gpio::MM100_CAN_TX; // PB13
 	engineConfiguration->canRxPin = Gpio::MM100_CAN_RX; // PB12
-
-	setHellenCan2();
 
 #if (EFI_CAN_BUS_COUNT >= 3)
 	engineConfiguration->can3TxPin = Gpio::MM100_CAN3_TX;
@@ -229,16 +221,18 @@ int getBoardMetaDcOutputsCount() {
 }
 
 static void colt_slowCallback() {
-#ifndef EFI_BOOTLOADER
-	extern AemXSeriesWideband aem1;
-	if (aem1.hasSeenRx) {
-		Gpio green = getRunningLedPin();
-		auto greenPort = getBrainPinPort(green);
-		auto greenPin = getBrainPinIndex(green);
-		palClearPad(greenPort, greenPin); // Hellen has inverted LED control
-	}
-#endif // EFI_BOOTLOADER
 }
+//static void colt_slowCallback() {
+//#ifndef EFI_BOOTLOADER
+	//extern AemXSeriesWideband aem1;
+	//if (aem1.hasSeenRx) {
+	//	Gpio green = getRunningLedPin();
+	//	auto greenPort = getBrainPinPort(green);
+	//	auto greenPin = getBrainPinIndex(green);
+	//	palClearPad(greenPort, greenPin); // Hellen has inverted LED control
+	//}
+//#endif // EFI_BOOTLOADER
+//}
 
 static void colt_fastCallback() {
 	processColtCanTx();
@@ -247,7 +241,7 @@ static void colt_fastCallback() {
 void setup_custom_board_overrides() {
 	custom_board_DefaultConfiguration = colt_boardDefaultConfiguration;
 	custom_board_ConfigOverrides = colt_boardConfigOverrides;
-	custom_board_periodicSlowCallback = colt_slowCallback;
+	//custom_board_periodicSlowCallback = colt_slowCallback;
 	custom_board_periodicFastCallback = colt_fastCallback;
 }
 
@@ -270,3 +264,17 @@ int boardGetAnalogInputDiagnostic(adc_channel_e hwChannel, float voltage) {
 			return 0;
 	}
 }
+
+#ifndef EFI_BOOTLOADER
+Gpio getWarningLedPin() {
+	return Gpio::Unassigned;
+}
+
+Gpio getCommsLedPin() {
+	return Gpio::Unassigned;
+}
+
+Gpio getRunningLedPin() {
+	return Gpio::Unassigned;
+}
+#endif
