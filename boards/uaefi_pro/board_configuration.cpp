@@ -11,6 +11,7 @@
 #include "board_overrides.h"
 #include "connectors/generated_board_pin_names.h"
 #include "colt_can.h"
+#include "hellen_logic.h"
 
 #ifndef EFI_BOOTLOADER
 #include "AemXSeriesLambda.h"
@@ -163,7 +164,7 @@ static void colt_boardDefaultConfiguration() {
 #endif // EFI_BOOTLOADER
 
 	setTPS1Calibration(100, 650);
-
+    hellenWbo();
 	// Colt CAN init
 	initColtCan();
 }
