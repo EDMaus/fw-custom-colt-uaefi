@@ -8,10 +8,11 @@
 static uint32_t last10msTx = 0;
 static uint32_t last14msTx = 0;
 static uint32_t last20msTx = 0;
-static uint32_t last28msTx = 0;
 static uint32_t last100msTx = 0;
+static uint32_t canTxEnableAfterMs = 0;
 
 static constexpr size_t COLT_CAN_BUS = 0;
+static constexpr uint32_t COLT_CAN_STARTUP_DELAY_MS = 3000;
 
 // ----------------------------------------------------
 // Runtime RX state
@@ -22,10 +23,6 @@ struct ColtRuntime {
 	bool parkingBrake = false;
 	bool clutchPressed = false;
 	bool acRequest = false;
-
-	// placeholders until real body inputs are wired/decoded
-	bool doorOpen = false;
-	uint8_t lightMode = 0;   // 0=off,1=auto,2=parking,3=dim,4=high
 
 	float vehicleSpeedKph = 0.0f;
 	float coolantTempC = 0.0f;
@@ -75,12 +72,10 @@ static bool getBatteryWarning() {
 }
 
 static bool getMilWarning() {
-	// TODO later koppelen aan echte MIL / CEL status
 	return false;
 }
 
 static bool getOilWarning() {
-	// TODO later koppelen aan echte oliedruk/engine protect logica
 	return false;
 }
 
@@ -143,7 +138,6 @@ static uint8_t encode0C0Byte4(int rpm) {
 // Frame builders
 // ----------------------------------------------------
 
-// 0x0C0: RPM-related candidate from logs, keep for vehicle presence
 static void buildFrame0C0(uint8_t* d) {
 	memset(d, 0, 8);
 
@@ -153,7 +147,6 @@ static void buildFrame0C0(uint8_t* d) {
 	d[4] = encode0C0Byte4(rpm);
 }
 
-// 0x210: load/throttle-like, byte2
 static void buildFrame210(uint8_t* d) {
 	memset(d, 0, 8);
 
@@ -161,7 +154,6 @@ static void buildFrame210(uint8_t* d) {
 	d[2] = scaleTpsTo210(getTpsPercent());
 }
 
-// 0x212: torque/load companion, byte5
 static void buildFrame212(uint8_t* d) {
 	memset(d, 0, 8);
 
@@ -169,7 +161,7 @@ static void buildFrame212(uint8_t* d) {
 	d[5] = scaleTpsTo212Byte5(getTpsPercent());
 }
 
-// 0x308: hard-proven cluster frame
+// Proven cluster frame
 static void buildFrame308(uint8_t* d) {
 	memset(d, 0, 8);
 
@@ -198,7 +190,6 @@ static void buildFrame308(uint8_t* d) {
 	d[7] = 0x00;
 }
 
-// 0x408: state frame from logs - keep for full vehicle behavior
 static void buildFrame408(uint8_t* d) {
 	memset(d, 0, 8);
 
@@ -212,7 +203,6 @@ static void buildFrame408(uint8_t* d) {
 	d[7] = 0x00;
 }
 
-// 0x416: state byte around 0x75..0x7A
 static void buildFrame416(uint8_t* d) {
 	memset(d, 0, 8);
 
@@ -231,50 +221,18 @@ static void buildFrame416(uint8_t* d) {
 	}
 }
 
-// 0x423: use proven stable baseline, but keep door/light capability
+// Keep old, safer vehicle-style 423 for now
 static void buildFrame423(uint8_t* d) {
 	memset(d, 0, 6);
 
-	d[0] = 0x03;
+	d[0] = getEngineRunning() ? 0x03 : 0x01;
 	d[1] = 0x00;
-	d[2] = g_colt.doorOpen ? 0x02 : 0x00;
-	d[3] = 0x09;
+	d[2] = 0x00;
+	d[3] = getAcRequest() ? 0x09 : 0x08;
 	d[4] = 0x2E;
 	d[5] = 0xBC;
-
-	switch (g_colt.lightMode) {
-		case 0: // off
-			d[0] = 0x03;
-			d[1] = 0x00;
-			break;
-		case 1: // auto
-			d[0] = 0x07;
-			d[1] = 0x00;
-			break;
-		case 2: // parking
-		case 3: // dim
-		case 4: // high
-			d[0] = 0x07;
-			d[1] = 0x04;
-			break;
-		default:
-			break;
-	}
 }
 
-// 0x443: proven AC companion frame
-static void buildFrame443(uint8_t* d) {
-	memset(d, 0, 6);
-
-	d[0] = getAcRequest() ? 0x01 : 0x00;
-	d[1] = 0x02;
-	d[2] = 0x00;
-	d[3] = 0x00;
-	d[4] = 0x00;
-	d[5] = 0x00;
-}
-
-// 0x584: keepalive from previous vehicle-safe build
 static void buildFrame584(uint8_t* d) {
 	d[0] = 0xC0;
 }
@@ -287,43 +245,39 @@ void initColtCan() {
 	last10msTx = 0;
 	last14msTx = 0;
 	last20msTx = 0;
-	last28msTx = 0;
 	last100msTx = 0;
+	canTxEnableAfterMs = getTimeNowMs() + COLT_CAN_STARTUP_DELAY_MS;
 }
 
 void processColtCanTx() {
 	const uint32_t nowMs = getTimeNowMs();
+
+	// Boot-safe delay before any CAN TX
+	if ((int32_t)(nowMs - canTxEnableAfterMs) < 0) {
+		return;
+	}
 
 	g_colt.rpm = (float)getCurrentRpm();
 	g_colt.coolantTempC = (float)getCoolantTempC();
 	g_colt.vehicleSpeedKph = (float)getVehicleSpeedKph();
 	g_colt.tpsPct = getTpsPercent();
 
-	// Keep older broader vehicle presence at 10ms
 	if ((nowMs - last10msTx) >= 10) {
 		last10msTx = nowMs;
 
 		uint8_t data[8];
-
 		buildFrame0C0(data);
 		sendCanFrame(0x0C0, data, 8);
 	}
 
-	// Proven cluster engine frame + AC companion at ~14ms
 	if ((nowMs - last14msTx) >= 14) {
 		last14msTx = nowMs;
 
-		uint8_t data8[8];
-		uint8_t data6[6];
-
-		buildFrame308(data8);
-		sendCanFrame(0x308, data8, 8);
-
-		buildFrame443(data6);
-		sendCanFrame(0x443, data6, 6);
+		uint8_t data[8];
+		buildFrame308(data);
+		sendCanFrame(0x308, data, 8);
 	}
 
-	// Keep legacy load/torque presence at 20ms
 	if ((nowMs - last20msTx) >= 20) {
 		last20msTx = nowMs;
 
@@ -336,20 +290,11 @@ void processColtCanTx() {
 		sendCanFrame(0x212, data, 8);
 	}
 
-	// Proven body/status scene frame at ~28ms instead of 100ms
-	if ((nowMs - last28msTx) >= 28) {
-		last28msTx = nowMs;
-
-		uint8_t data6[6];
-		buildFrame423(data6);
-		sendCanFrame(0x423, data6, 6);
-	}
-
-	// Keep older auxiliary ECU presence at 100ms
 	if ((nowMs - last100msTx) >= 100) {
 		last100msTx = nowMs;
 
 		uint8_t data8[8];
+		uint8_t data6[6];
 		uint8_t data1[1];
 
 		buildFrame408(data8);
@@ -357,6 +302,9 @@ void processColtCanTx() {
 
 		buildFrame416(data8);
 		sendCanFrame(0x416, data8, 8);
+
+		buildFrame423(data6);
+		sendCanFrame(0x423, data6, 6);
 
 		buildFrame584(data1);
 		sendCanFrame(0x584, data1, 1);
@@ -378,11 +326,9 @@ void processColtCanRx(uint32_t id, const uint8_t* data, uint8_t dlc) {
 			break;
 
 		case 0x300:
-			// ASC -> engine
 			break;
 
 		case 0x412:
-			// meter -> engine
 			break;
 
 		default:
