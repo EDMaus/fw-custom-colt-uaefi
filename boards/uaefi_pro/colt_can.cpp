@@ -78,11 +78,6 @@ static ColtEcuState getColtState() {
 // -----------------------------
 // Helpers
 // -----------------------------
-static uint8_t clampToU8(int v) {
-	if (v < 0) return 0;
-	if (v > 255) return 255;
-	return static_cast<uint8_t>(v);
-}
 
 static float clampPct(float v) {
 	if (v < 0.0f) return 0.0f;
