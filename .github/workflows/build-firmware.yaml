@@ -201,9 +201,11 @@ jobs:
           if not p.exists():
               raise SystemExit("Output SREC not found")
 
+          lines = [line.strip() for line in p.read_text(encoding="ascii").splitlines() if line.strip()]
+
           first_addr = None
 
-          for line in p.read_text(encoding="ascii").splitlines():
+          for line in lines:
               if line.startswith(("S1", "S2", "S3")):
                   t = line[1]
                   n = {"1": 4, "2": 6, "3": 8}[t]
@@ -217,6 +219,13 @@ jobs:
 
           if first_addr != 0x08008000:
               raise SystemExit(f"Update SREC does not start at 0x08008000, got 0x{first_addr:08X}")
+
+          expected_last = "S7050800800072"
+          actual_last = lines[-1]
+          print(f"Last SREC line: {actual_last}")
+
+          if actual_last != expected_last:
+              raise SystemExit(f"Wrong SREC termination/start record. Expected {expected_last}, got {actual_last}")
 
           print(f"Verified output size: {p.stat().st_size} bytes")
           PY
