@@ -9,10 +9,8 @@ static uint32_t last10msTx = 0;
 static uint32_t last14msTx = 0;
 static uint32_t last20msTx = 0;
 static uint32_t last100msTx = 0;
-static uint32_t canTxEnableAfterMs = 0;
 
 static constexpr size_t COLT_CAN_BUS = 0;
-static constexpr uint32_t COLT_CAN_STARTUP_DELAY_MS = 3000;
 
 // ----------------------------------------------------
 // Runtime RX state
@@ -21,7 +19,7 @@ static constexpr uint32_t COLT_CAN_STARTUP_DELAY_MS = 3000;
 struct ColtRuntime {
 	bool brakePressed = false;
 	bool parkingBrake = false;
-	bool clutchPressed = false;
+	bool clutchPressed = false;   // TODO echte bron
 	bool acRequest = false;
 
 	float vehicleSpeedKph = 0.0f;
@@ -35,6 +33,12 @@ static ColtRuntime g_colt;
 // ----------------------------------------------------
 // Helpers
 // ----------------------------------------------------
+
+static uint8_t clampToU8(int v) {
+	if (v < 0) return 0;
+	if (v > 255) return 255;
+	return (uint8_t)v;
+}
 
 static float clampPct(float v) {
 	if (v < 0.0f) return 0.0f;
@@ -72,14 +76,19 @@ static bool getBatteryWarning() {
 }
 
 static bool getMilWarning() {
+	// TODO later koppelen aan echte MIL / CEL status
 	return false;
 }
 
 static bool getOilWarning() {
+	// TODO later koppelen aan echte oliedruk/engine protect logica
 	return false;
 }
 
-// Bench-proven cluster RPM encoding for 0x308
+// ----------------------------------------------------
+// Proven Colt cluster RPM encoding for 0x308
+// raw = rpm * 1024 / 1000
+// ----------------------------------------------------
 static uint16_t encodeClusterRpm308(int rpm) {
 	if (rpm < 0) rpm = 0;
 	if (rpm > 8000) rpm = 8000;
@@ -92,6 +101,8 @@ static void sendCanFrame(uint32_t id, const uint8_t* data, uint8_t dlc) {
 	for (uint8_t i = 0; i < dlc && i < 8; i++) {
 		msg[i] = data[i];
 	}
+
+	// Constructor/object lifetime doet de TX
 }
 
 // ----------------------------------------------------
@@ -100,10 +111,7 @@ static void sendCanFrame(uint32_t id, const uint8_t* data, uint8_t dlc) {
 
 static uint8_t scaleTpsTo210(float tpsPercent) {
 	tpsPercent = clampPct(tpsPercent);
-	int v = (int)((tpsPercent * 250.0f) / 100.0f);
-	if (v < 0) v = 0;
-	if (v > 255) v = 255;
-	return (uint8_t)v;
+	return clampToU8((int)((tpsPercent * 250.0f) / 100.0f));   // 0x00..0xFA
 }
 
 static uint8_t scaleTpsTo212Byte5(float tpsPercent) {
@@ -125,19 +133,20 @@ static uint8_t scaleTpsTo212Byte5(float tpsPercent) {
 static uint8_t encode0C0Byte0(int rpm) {
 	if (rpm < 0) rpm = 0;
 	if (rpm > 12000) rpm = 12000;
-	return (uint8_t)((rpm * 255) / 12000);
+	return clampToU8((rpm * 255) / 12000);
 }
 
 static uint8_t encode0C0Byte4(int rpm) {
 	if (rpm < 0) rpm = 0;
 	if (rpm > 8000) rpm = 8000;
-	return (uint8_t)((rpm * 255) / 8000);
+	return clampToU8((rpm * 255) / 8000);
 }
 
 // ----------------------------------------------------
 // Frame builders
 // ----------------------------------------------------
 
+// 0x0C0: strongest RPM-related candidate from logs
 static void buildFrame0C0(uint8_t* d) {
 	memset(d, 0, 8);
 
@@ -147,6 +156,7 @@ static void buildFrame0C0(uint8_t* d) {
 	d[4] = encode0C0Byte4(rpm);
 }
 
+// 0x210: load/throttle-like, byte2
 static void buildFrame210(uint8_t* d) {
 	memset(d, 0, 8);
 
@@ -154,6 +164,7 @@ static void buildFrame210(uint8_t* d) {
 	d[2] = scaleTpsTo210(getTpsPercent());
 }
 
+// 0x212: torque/load companion, byte5
 static void buildFrame212(uint8_t* d) {
 	memset(d, 0, 8);
 
@@ -161,7 +172,11 @@ static void buildFrame212(uint8_t* d) {
 	d[5] = scaleTpsTo212Byte5(getTpsPercent());
 }
 
-// Proven cluster frame
+// 0x308: bewezen cluster frame
+// byte1-2 big-endian = RPM
+// byte3 bit1 = MIL
+// byte3 bit2 = oil lamp
+// byte4 bit4 = battery lamp
 static void buildFrame308(uint8_t* d) {
 	memset(d, 0, 8);
 
@@ -190,6 +205,7 @@ static void buildFrame308(uint8_t* d) {
 	d[7] = 0x00;
 }
 
+// 0x408: state frame from logs
 static void buildFrame408(uint8_t* d) {
 	memset(d, 0, 8);
 
@@ -203,6 +219,7 @@ static void buildFrame408(uint8_t* d) {
 	d[7] = 0x00;
 }
 
+// 0x416: state byte around 0x75..0x7A
 static void buildFrame416(uint8_t* d) {
 	memset(d, 0, 8);
 
@@ -221,7 +238,7 @@ static void buildFrame416(uint8_t* d) {
 	}
 }
 
-// Keep old, safer vehicle-style 423 for now
+// 0x423: mode/state
 static void buildFrame423(uint8_t* d) {
 	memset(d, 0, 6);
 
@@ -233,6 +250,7 @@ static void buildFrame423(uint8_t* d) {
 	d[5] = 0xBC;
 }
 
+// 0x584: keepalive
 static void buildFrame584(uint8_t* d) {
 	d[0] = 0xC0;
 }
@@ -246,16 +264,10 @@ void initColtCan() {
 	last14msTx = 0;
 	last20msTx = 0;
 	last100msTx = 0;
-	canTxEnableAfterMs = getTimeNowMs() + COLT_CAN_STARTUP_DELAY_MS;
 }
 
 void processColtCanTx() {
 	const uint32_t nowMs = getTimeNowMs();
-
-	// Boot-safe delay before any CAN TX
-	if ((int32_t)(nowMs - canTxEnableAfterMs) < 0) {
-		return;
-	}
 
 	g_colt.rpm = (float)getCurrentRpm();
 	g_colt.coolantTempC = (float)getCoolantTempC();
@@ -266,6 +278,7 @@ void processColtCanTx() {
 		last10msTx = nowMs;
 
 		uint8_t data[8];
+
 		buildFrame0C0(data);
 		sendCanFrame(0x0C0, data, 8);
 	}
@@ -274,6 +287,7 @@ void processColtCanTx() {
 		last14msTx = nowMs;
 
 		uint8_t data[8];
+
 		buildFrame308(data);
 		sendCanFrame(0x308, data, 8);
 	}
@@ -288,6 +302,9 @@ void processColtCanTx() {
 
 		buildFrame212(data);
 		sendCanFrame(0x212, data, 8);
+
+		//buildFrame312(data);
+		//sendCanFrame(0x312, data, 8);
 	}
 
 	if ((nowMs - last100msTx) >= 100) {
@@ -326,9 +343,11 @@ void processColtCanRx(uint32_t id, const uint8_t* data, uint8_t dlc) {
 			break;
 
 		case 0x300:
+			// ASC -> engine
 			break;
 
 		case 0x412:
+			// meter -> engine
 			break;
 
 		default:
