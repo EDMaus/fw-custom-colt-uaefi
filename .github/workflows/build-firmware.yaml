@@ -149,6 +149,17 @@ jobs:
           def addr_len(rec_type: str) -> int:
               return {"1": 2, "2": 3, "3": 4}[rec_type]
 
+          def make_s7_record(start_addr: int) -> str:
+              count = 0x05
+              addr_bytes = [
+                  (start_addr >> 24) & 0xFF,
+                  (start_addr >> 16) & 0xFF,
+                  (start_addr >> 8) & 0xFF,
+                  start_addr & 0xFF,
+              ]
+              checksum = (~(count + sum(addr_bytes))) & 0xFF
+              return f"S705{start_addr:08X}{checksum:02X}"
+
           kept = 0
           total_data_records = 0
 
@@ -163,8 +174,17 @@ jobs:
 
                   rec_type = line[1]
 
-                  if rec_type not in {"1", "2", "3"}:
+                  # Keep only header/count records.
+                  if rec_type in {"0", "5", "6"}:
                       fout.write(line + "\n")
+                      continue
+
+                  # Drop old termination/start records entirely.
+                  if rec_type in {"7", "8", "9"}:
+                      continue
+
+                  # Keep only S1/S2/S3 data records in app region.
+                  if rec_type not in {"1", "2", "3"}:
                       continue
 
                   total_data_records += 1
@@ -176,6 +196,8 @@ jobs:
                   if addr >= START_ADDR:
                       fout.write(line + "\n")
                       kept += 1
+
+              fout.write(make_s7_record(START_ADDR) + "\n")
 
           if total_data_records == 0:
               raise SystemExit("No S1/S2/S3 data records found in source SREC")
@@ -189,6 +211,9 @@ jobs:
           print(f"Kept data records: {kept}")
           print(f"Source size: {src.stat().st_size} bytes")
           print(f"Output size: {dst.stat().st_size} bytes")
+
+          lines = dst.read_text(encoding="ascii").splitlines()
+          print(f"Last SREC line: {lines[-1]}")
           PY
 
       - name: Verify fixed OpenBLT update SREC
