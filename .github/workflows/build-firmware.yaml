@@ -198,7 +198,7 @@ jobs:
           name: rusefi_update_uaefi_pro_fixed
           path: ${{ steps.locate-update-srec.outputs.update_srec_path }}
 
-                - name: Dump all update SREC details
+      - name: Dump all update SREC details
         shell: bash
         run: |
           python3 - << 'PY'
