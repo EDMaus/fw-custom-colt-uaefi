@@ -100,7 +100,7 @@ jobs:
           name: firmware-file-report
           path: firmware_file_report.txt
 
-            - name: Locate generated update SREC
+      - name: Locate generated update SREC
         id: locate-update-srec
         shell: bash
         run: |
@@ -118,7 +118,6 @@ jobs:
               print("ERROR: No *_update.srec found in workspace", file=sys.stderr)
               sys.exit(1)
 
-          # Only keep realistic firmware update files
           candidates = [c for c in candidates if c.stat().st_size > 100000]
 
           print("Large *_update.srec candidates:")
@@ -191,19 +190,10 @@ jobs:
 
           if first_addr != 0x08008000:
               raise SystemExit(f"Update SREC does not start at 0x08008000, got 0x{first_addr:08X}")
-          PY    
+          PY
 
-            - name: Upload generated update SREC
+      - name: Upload generated update SREC
         uses: actions/upload-artifact@v4
         with:
           name: rusefi_update_uaefi_pro_fixed
           path: ${{ steps.locate-update-srec.outputs.update_srec_path }}
-
-      - name: Upload debug file lists
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: firmware-file-scan
-          path: |
-            .
-          if-no-files-found: warn
