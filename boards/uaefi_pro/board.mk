@@ -1,5 +1,7 @@
 # boards/uaefi_pro/board.mk
 
+USE_OPENBLT = yes
+
 # Board-local source files
 BOARDCPPSRC += $(BOARD_DIR)/board_configuration.cpp
 BOARDCPPSRC += $(BOARD_DIR)/colt_can.cpp
