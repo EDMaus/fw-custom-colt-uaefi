@@ -164,7 +164,7 @@ static void colt_boardDefaultConfiguration() {
 #endif // EFI_BOOTLOADER
 
 	setTPS1Calibration(100, 650);
-   // hellenWbo();
+    hellenWbo();
 	// Colt CAN init
 	initColtCan();
 }
@@ -227,10 +227,12 @@ int getBoardMetaDcOutputsCount() {
 //#endif // EFI_BOOTLOADER
 //}
 
+static void colt_fastCallback();
+
 void setup_custom_board_overrides() {
 	custom_board_DefaultConfiguration = colt_boardDefaultConfiguration;
 	custom_board_ConfigOverrides = colt_boardConfigOverrides;
-	// custom_board_periodicFastCallback = colt_fastCallback;
+	custom_board_periodicFastCallback = colt_fastCallback;
 }
 
 int boardGetAnalogInputDiagnostic(adc_channel_e hwChannel, float voltage) {
@@ -253,6 +255,14 @@ int boardGetAnalogInputDiagnostic(adc_channel_e hwChannel, float voltage) {
 	}
 }
 
+#ifdef EFI_BOOTLOADER
+static void colt_fastCallback() {
+}
+#else
+static void colt_fastCallback() {
+	processColtCanTx();
+}
+#endif
 
 Gpio getWarningLedPin() {
 	return Gpio::Unassigned;
