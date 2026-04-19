@@ -227,8 +227,6 @@ int getBoardMetaDcOutputsCount() {
 //#endif // EFI_BOOTLOADER
 //}
 
-static void colt_fastCallback();
-
 void setup_custom_board_overrides() {
 	custom_board_DefaultConfiguration = colt_boardDefaultConfiguration;
 	custom_board_ConfigOverrides = colt_boardConfigOverrides;
@@ -255,14 +253,6 @@ int boardGetAnalogInputDiagnostic(adc_channel_e hwChannel, float voltage) {
 	}
 }
 
-#ifdef EFI_BOOTLOADER
-static void colt_fastCallback() {
-}
-#else
-static void colt_fastCallback() {
-	processColtCanTx();
-}
-#endif
 
 Gpio getWarningLedPin() {
 	return Gpio::Unassigned;
