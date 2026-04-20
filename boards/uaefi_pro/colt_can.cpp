@@ -36,7 +36,7 @@ void processColtCanTx() {
 	float rpm = Sensor::getOrZero(SensorType::Rpm);
 	uint16_t rawRpm = (uint16_t)(rpm * 1024.0f / 1000.0f);
 
-	CanTxMessage msg(CanCategory::NBC, 0x308, 8, DEFAULT_BUS_INDEX);
+	CanTxMessage msg(CanCategory::NBC, 0x308, 8, 0);
 
 	msg[0] = 0x00;
 	msg[1] = (rawRpm >> 8) & 0xFF;
