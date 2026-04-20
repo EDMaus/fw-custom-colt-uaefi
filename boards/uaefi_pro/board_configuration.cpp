@@ -67,7 +67,7 @@ bool validateBoardConfig() {
         return true;
 }
 
-static void setUaefiDefaultETBPins() {
+void setUaefiDefaultETBPins() {
 	// Official UAEFI ETB defaults
 	setupTLE9201IncludingStepper(
 		/*PWM controlPin*/ Gpio::MM100_OUT_PWM3,
