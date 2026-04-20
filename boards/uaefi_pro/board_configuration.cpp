@@ -8,6 +8,7 @@
 #include "pch.h"
 #include "defaults.h"
 #include "hellen_meta.h"
+#include "hellen_leds_100.cpp"
 #include "board_overrides.h"
 #include "connectors/generated_board_pin_names.h"
 #include "colt_can.h"
@@ -59,12 +60,24 @@ static void setupDefaultSensorInputs() {
 }
 
 static void colt_boardConfigOverrides() {
-        engineConfiguration->vrThreshold[0].pin = Gpio::MM100_OUT_PWM6;
-        setDefaultHellenAtPullUps();
+	setHellenMegaEnPin();
+	setHellenVbatt();
+
+	hellenMegaSdWithAccelerometer();
+
+	engineConfiguration->vrThreshold[0].pin = Gpio::MM100_OUT_PWM6;
+
+	setHellenCan();
+
+	setDefaultHellenAtPullUps();
 }
 
 bool validateBoardConfig() {
-        return true;
+	if (engineConfiguration->can2RxPin != Gpio::B12) {
+		setHellenCan2();
+	}
+
+	return true;
 }
 
 void setUaefiDefaultETBPins() {
@@ -215,23 +228,13 @@ int getBoardMetaDcOutputsCount() {
 	return 2;
 }
 
-//static void colt_slowCallback() {
-//#ifndef EFI_BOOTLOADER
-	//extern AemXSeriesWideband aem1;
-	//if (aem1.hasSeenRx) {
-	//	Gpio green = getRunningLedPin();
-	//	auto greenPort = getBrainPinPort(green);
-	//	auto greenPin = getBrainPinIndex(green);
-	//	palClearPad(greenPort, greenPin); // Hellen has inverted LED control
-	//}
-//#endif // EFI_BOOTLOADER
-//}
-
 static void colt_fastCallback();
+static void colt_slowCallback();
 
 void setup_custom_board_overrides() {
 	custom_board_DefaultConfiguration = colt_boardDefaultConfiguration;
 	custom_board_ConfigOverrides = colt_boardConfigOverrides;
+	custom_board_periodicSlowCallback = colt_slowCallback;
 	custom_board_periodicFastCallback = colt_fastCallback;
 }
 
@@ -264,14 +267,15 @@ static void colt_fastCallback() {
 }
 #endif
 
-Gpio getWarningLedPin() {
-	return Gpio::Unassigned;
-}
+static void colt_slowCallback() {
+#ifndef EFI_BOOTLOADER
+	extern AemXSeriesWideband aem1;
 
-Gpio getCommsLedPin() {
-	return Gpio::Unassigned;
-}
-
-Gpio getRunningLedPin() {
-	return Gpio::Unassigned;
+	if (aem1.hasSeenRx) {
+		Gpio green = getRunningLedPin();
+		auto greenPort = getBrainPinPort(green);
+		auto greenPin = getBrainPinIndex(green);
+		palClearPad(greenPort, greenPin); // Hellen has inverted LED control
+	}
+#endif // EFI_BOOTLOADER
 }
