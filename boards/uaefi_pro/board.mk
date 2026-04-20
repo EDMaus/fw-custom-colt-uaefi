@@ -1,12 +1,12 @@
 # boards/uaefi_pro/board.mk
 
-USE_OPENBLT = yes
+# Start from the official uaEFI/uaEFI Pro MM100 board definition.
+# This pulls in Hellen MM100 defaults, USB descriptor, board id, ADC/CAN/EGT/SENT,
+# communication port, and the correct common sources.
+include $(BOARDS_DIR)/hellen/uaefi/board.mk
 
-# Board-local source files
-BOARDCPPSRC += $(BOARD_DIR)/board_configuration.cpp
+# Board-local custom source files
 BOARDCPPSRC += $(BOARD_DIR)/colt_can.cpp
-BOARDCPPSRC += \
-    $(BOARD_DIR)/../../ext/rusefi/firmware/config/boards/hellen/hellen_common.cpp
 
-# Board include path
+# Board-local headers
 BOARDINC += $(BOARD_DIR)

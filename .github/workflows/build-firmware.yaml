@@ -75,6 +75,13 @@ jobs:
           RUSEFI_SSH_PASS: ${{ secrets.RUSEFI_SSH_PASS }}
           ADDITIONAL_ENV: ${{ secrets.ADDITIONAL_ENV }}
 
+      - name: Upload correct OpenBLT update SREC
+        uses: actions/upload-artifact@v4
+        with:
+          name: rusefi_update_uaefi_pro.srec
+          path: ext/rusefi/firmware/build/rusefi.srec
+
+
       - name: Generate firmware file reports
         shell: bash
         run: |
