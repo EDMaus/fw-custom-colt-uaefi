@@ -254,7 +254,7 @@ void boardUpdateDash(CanCycle cycle) {
 
     const uint16_t rawRpm = encodeColtDashRpm(Sensor::getOrZero(SensorType::Rpm));
 
-    CanTxMessage msg(CanCategory::NBC, 0x308, 8);
+    CanTxMessage msg(CanCategory::NBC, 0x308, 8, 0);
 
 
     msg[0] = 0x00;
