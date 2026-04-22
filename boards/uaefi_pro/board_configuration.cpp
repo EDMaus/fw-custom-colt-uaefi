@@ -248,27 +248,24 @@ static uint16_t encodeColtDashRpm(float rpm) {
 }
 
 void boardUpdateDash(CanCycle cycle) {
-    if (!cycle.isInterval(CI::_10ms)) {
-        return;
-    }
+	if (cycle.isInterval(CI::_10ms)) {
+		const uint16_t rawRpm = encodeColtDashRpm(Sensor::getOrZero(SensorType::Rpm));
 
-    const uint16_t rawRpm = encodeColtDashRpm(Sensor::getOrZero(SensorType::Rpm));
+		CanTxMessage msg(CanCategory::NBC, 0x308, 8, 0);
 
-    CanTxMessage msg(CanCategory::NBC, 0x308, 8, 0);
-
-
-    msg[0] = 0x00;
-    msg[1] = (rawRpm >> 8) & 0xFF;
-    msg[2] = rawRpm & 0xFF;
-    msg[3] = 0x00;
-    msg[4] = 0x00;
-    msg[5] = 0x00;
-    msg[6] = 0x00;
-    msg[7] = 0x00;
-}
+		msg[0] = 0x00;
+		msg[1] = (rawRpm >> 8) & 0xFF;
+		msg[2] = rawRpm & 0xFF;
+		msg[3] = 0x00;
+		msg[4] = 0x00;
+		msg[5] = 0x00;
+		msg[6] = 0x00;
+		msg[7] = 0x00;
+	}
 
 	if (cycle.isInterval(CI::_200ms)) {
-		CanTxMessage fanMsg(CanCategory::NBC, 0x408, 8);
+		CanTxMessage fanMsg(CanCategory::NBC, 0x408, 8, 0);
+
 		fanMsg[0] = 0x11;
 		fanMsg[1] = 0x00;
 		fanMsg[2] = 0x64;
@@ -278,6 +275,8 @@ void boardUpdateDash(CanCycle cycle) {
 		fanMsg[6] = 0x4F;
 		fanMsg[7] = 0x00;
 	}
+}
+
 
 
 #endif // !EFI_BOOTLOADER && EFI_CAN_SUPPORT
