@@ -108,11 +108,11 @@ static void setupColtIo() {
 	engineConfiguration->fanPin = Gpio::Unassigned;
 
 	// OEM-style start request + starter relay
-	engineConfiguration->startStopButtonPin = Gpio::MM100_IN_VSS; // D5 / IN_FLEX from your notes
+	engineConfiguration->startStopButtonPin = Gpio::Unassigned; // D5 / IN_FLEX from your notes
 	engineConfiguration->startStopButtonMode = PI_DEFAULT;
 	engineConfiguration->startRequestPinInverted = false;
 
-	engineConfiguration->starterControlPin = Gpio::MM100_IGN8; // B8
+	engineConfiguration->starterControlPin = Gpio::Unassigned; // B8
 
 	// Optional A/C input later if needed
 	// engineConfiguration->acSwitch = Gpio::MM100_IN_BUTTON2;
