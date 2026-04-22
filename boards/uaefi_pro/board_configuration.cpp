@@ -267,6 +267,19 @@ void boardUpdateDash(CanCycle cycle) {
     msg[7] = 0x00;
 }
 
+	if (cycle.isInterval(CI::_200ms)) {
+		CanTxMessage fanMsg(CanCategory::NBC, 0x408, 8);
+		fanMsg[0] = 0x11;
+		fanMsg[1] = 0x00;
+		fanMsg[2] = 0x64;
+		fanMsg[3] = 0xFF;
+		fanMsg[4] = 0xFE;
+		fanMsg[5] = 0xC3;
+		fanMsg[6] = 0x4F;
+		fanMsg[7] = 0x00;
+	}
+
+
 #endif // !EFI_BOOTLOADER && EFI_CAN_SUPPORT
 
 static void colt_fastCallback();
