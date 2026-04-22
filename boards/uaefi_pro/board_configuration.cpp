@@ -251,16 +251,16 @@ void boardUpdateDash(CanCycle cycle) {
 	if (cycle.isInterval(CI::_10ms)) {
 		const uint16_t rawRpm = encodeColtDashRpm(Sensor::getOrZero(SensorType::Rpm));
 
-		CanTxMessage msg(CanCategory::NBC, 0x308, 8, 0);
+		CanTxMessage rpmMsg(CanCategory::NBC, 0x308, 8, 0);
 
-		msg[0] = 0x00;
-		msg[1] = (rawRpm >> 8) & 0xFF;
-		msg[2] = rawRpm & 0xFF;
-		msg[3] = 0x00;
-		msg[4] = 0x00;
-		msg[5] = 0x00;
-		msg[6] = 0x00;
-		msg[7] = 0x00;
+		rpmMsg[0] = 0x00;
+		rpmMsg[1] = (rawRpm >> 8) & 0xFF;
+		rpmMsg[2] = rawRpm & 0xFF;
+		rpmMsg[3] = 0x00;
+		rpmMsg[4] = 0x00;
+		rpmMsg[5] = 0x00;
+		rpmMsg[6] = 0x00;
+		rpmMsg[7] = 0x00;
 	}
 
 	if (cycle.isInterval(CI::_200ms)) {
@@ -274,8 +274,20 @@ void boardUpdateDash(CanCycle cycle) {
 		fanMsg[5] = 0xC3;
 		fanMsg[6] = 0x4F;
 		fanMsg[7] = 0x00;
+
+		CanTxMessage etacsMsg(CanCategory::NBC, 0x412, 8, 0);
+
+		etacsMsg[0] = 0x62;
+		etacsMsg[1] = 0x00;
+		etacsMsg[2] = 0x05;
+		etacsMsg[3] = 0xD7;
+		etacsMsg[4] = 0x8C;
+		etacsMsg[5] = 0x61;
+		etacsMsg[6] = 0x01;
+		etacsMsg[7] = 0xFF;
 	}
 }
+
 
 
 
