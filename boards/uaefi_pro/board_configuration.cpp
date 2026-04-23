@@ -301,6 +301,28 @@ void boardUpdateDash(CanCycle cycle) {
 		acMsg[5] = 0x00;
 	}
 
+	if (cycle.isInterval(CI::_100ms)) {
+		CanTxMessage fanStatusMsg(CanCategory::NBC, 0x408, 8, 0);
+		fanStatusMsg[0] = 0x10;
+		fanStatusMsg[1] = 0x00;
+		fanStatusMsg[2] = 0x69;
+		fanStatusMsg[3] = 0xFF;
+		fanStatusMsg[4] = 0x9E;
+		fanStatusMsg[5] = 0xC3;
+		fanStatusMsg[6] = 0x4F;
+		fanStatusMsg[7] = 0x00;
+
+		CanTxMessage engineStateMsg(CanCategory::NBC, 0x416, 8, 0);
+		engineStateMsg[0] = 0x75;
+		engineStateMsg[1] = 0x00;
+		engineStateMsg[2] = 0x00;
+		engineStateMsg[3] = 0x00;
+		engineStateMsg[4] = 0x00;
+		engineStateMsg[5] = 0x00;
+		engineStateMsg[6] = 0x00;
+		engineStateMsg[7] = 0x00;
+	}
+
 	if (cycle.isInterval(CI::_200ms)) {
 		CanTxMessage keepaliveMsg(CanCategory::NBC, 0x584, 1, 0);
 		keepaliveMsg[0] = 0xC0;
@@ -360,5 +382,6 @@ static void colt_slowCallback() {
 	}
 #endif // EFI_BOOTLOADER
 }
+
 
 
