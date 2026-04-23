@@ -253,43 +253,59 @@ void boardUpdateDash(CanCycle cycle) {
 
 		CanTxMessage rpmMsg(CanCategory::NBC, 0x308, 8, 0);
 
+		uint8_t dashStatus = 0x00;
+		uint8_t batteryStatus = 0x00;
+		const bool milOn = false;
+		const bool oilOn = false;
+		const bool batteryOn = false;
+
+		if (milOn) {
+			dashStatus |= 0x02;
+		}
+
+		if (oilOn) {
+			dashStatus |= 0x04;
+		}
+
+		if (batteryOn) {
+			batteryStatus |= 0x10;
+		}
+
 		rpmMsg[0] = 0x00;
 		rpmMsg[1] = (rawRpm >> 8) & 0xFF;
 		rpmMsg[2] = rawRpm & 0xFF;
-		rpmMsg[3] = 0x00;
-		rpmMsg[4] = 0x00;
+		rpmMsg[3] = dashStatus;
+		rpmMsg[4] = batteryStatus;
 		rpmMsg[5] = 0x00;
-		rpmMsg[6] = 0x00;
+		rpmMsg[6] = 0x80;
 		rpmMsg[7] = 0x00;
 	}
 
+	if (cycle.isInterval(CI::_100ms)) {
+		CanTxMessage clusterMsg(CanCategory::NBC, 0x423, 6, 0);
+
+		clusterMsg[0] = 0x03;
+		clusterMsg[1] = 0x00;
+		clusterMsg[2] = 0x00;
+		clusterMsg[3] = 0x09;
+		clusterMsg[4] = 0x2E;
+		clusterMsg[5] = 0xBC;
+
+		CanTxMessage acMsg(CanCategory::NBC, 0x443, 6, 0);
+
+		acMsg[0] = 0x00;
+		acMsg[1] = 0x02;
+		acMsg[2] = 0x00;
+		acMsg[3] = 0x00;
+		acMsg[4] = 0x00;
+		acMsg[5] = 0x00;
+	}
+
 	if (cycle.isInterval(CI::_200ms)) {
-		CanTxMessage fanMsg(CanCategory::NBC, 0x408, 8, 0);
-
-		fanMsg[0] = 0x11;
-		fanMsg[1] = 0x00;
-		fanMsg[2] = 0x64;
-		fanMsg[3] = 0xFF;
-		fanMsg[4] = 0xFE;
-		fanMsg[5] = 0xC3;
-		fanMsg[6] = 0x4F;
-		fanMsg[7] = 0x00;
-
-		CanTxMessage etacsMsg(CanCategory::NBC, 0x412, 8, 0);
-
-		etacsMsg[0] = 0x62;
-		etacsMsg[1] = 0x00;
-		etacsMsg[2] = 0x05;
-		etacsMsg[3] = 0xD7;
-		etacsMsg[4] = 0x8C;
-		etacsMsg[5] = 0x61;
-		etacsMsg[6] = 0x01;
-		etacsMsg[7] = 0xFF;
+		CanTxMessage keepaliveMsg(CanCategory::NBC, 0x584, 1, 0);
+		keepaliveMsg[0] = 0xC0;
 	}
 }
-
-
-
 
 #endif // !EFI_BOOTLOADER && EFI_CAN_SUPPORT
 
@@ -344,3 +360,5 @@ static void colt_slowCallback() {
 	}
 #endif // EFI_BOOTLOADER
 }
+
+
