@@ -323,9 +323,14 @@ void boardUpdateDash(CanCycle cycle) {
 		engineStateMsg[7] = 0x00;
 	}
 
-	if (cycle.isInterval(CI::_40ms)) {
-		CanTxMessage keepaliveMsg(CanCategory::NBC, 0x584, 1, 0);
-		keepaliveMsg[0] = 0xC0;
+	if (cycle.isInterval(CI::_20ms)) {
+		static bool sendKeepaliveThisTick = false;
+		sendKeepaliveThisTick = !sendKeepaliveThisTick;
+
+		if (sendKeepaliveThisTick) {
+			CanTxMessage keepaliveMsg(CanCategory::NBC, 0x584, 1, 0);
+			keepaliveMsg[0] = 0xC0;
+		}
 	}
 }
 
@@ -382,6 +387,7 @@ static void colt_slowCallback() {
 	}
 #endif // EFI_BOOTLOADER
 }
+
 
 
 
