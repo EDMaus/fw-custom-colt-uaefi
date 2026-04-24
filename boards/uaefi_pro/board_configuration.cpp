@@ -253,67 +253,67 @@ void boardUpdateDash(CanCycle cycle) {
 
 		CanTxMessage rpmMsg(CanCategory::NBC, 0x308, 8, 0);
 
-		uint8_t dashStatus = 0x00;
-		uint8_t batteryStatus = 0x00;
+		uint8_t dashStatus = 0x04;
 		const bool milOn = false;
-		const bool oilOn = false;
-		const bool batteryOn = false;
+		const bool oilOn = true;
 
 		if (milOn) {
 			dashStatus |= 0x02;
 		}
 
-		if (oilOn) {
-			dashStatus |= 0x04;
-		}
-
-		if (batteryOn) {
-			batteryStatus |= 0x10;
+		if (!oilOn) {
+			dashStatus &= static_cast<uint8_t>(~0x04);
 		}
 
 		rpmMsg[0] = 0x00;
 		rpmMsg[1] = (rawRpm >> 8) & 0xFF;
 		rpmMsg[2] = rawRpm & 0xFF;
 		rpmMsg[3] = dashStatus;
-		rpmMsg[4] = batteryStatus;
-		rpmMsg[5] = 0x00;
-		rpmMsg[6] = 0x80;
+		rpmMsg[4] = 0x00;
+		rpmMsg[5] = 0x30;
+		rpmMsg[6] = 0xFF;
 		rpmMsg[7] = 0x00;
 	}
 
 	if (cycle.isInterval(CI::_100ms)) {
 		CanTxMessage clusterMsg(CanCategory::NBC, 0x423, 6, 0);
-
 		clusterMsg[0] = 0x03;
 		clusterMsg[1] = 0x00;
 		clusterMsg[2] = 0x00;
-		clusterMsg[3] = 0x09;
+		clusterMsg[3] = 0x08;
 		clusterMsg[4] = 0x2E;
 		clusterMsg[5] = 0xBC;
 
 		CanTxMessage acMsg(CanCategory::NBC, 0x443, 6, 0);
-
 		acMsg[0] = 0x00;
-		acMsg[1] = 0x02;
+		acMsg[1] = 0x01;
 		acMsg[2] = 0x00;
 		acMsg[3] = 0x00;
 		acMsg[4] = 0x00;
 		acMsg[5] = 0x00;
-	}
 
-	if (cycle.isInterval(CI::_100ms)) {
 		CanTxMessage fanStatusMsg(CanCategory::NBC, 0x408, 8, 0);
-		fanStatusMsg[0] = 0x10;
+		fanStatusMsg[0] = 0x11;
 		fanStatusMsg[1] = 0x00;
-		fanStatusMsg[2] = 0x69;
+		fanStatusMsg[2] = 0x64;
 		fanStatusMsg[3] = 0xFF;
-		fanStatusMsg[4] = 0x9E;
+		fanStatusMsg[4] = 0xFE;
 		fanStatusMsg[5] = 0xC3;
 		fanStatusMsg[6] = 0x4F;
 		fanStatusMsg[7] = 0x00;
 
+		CanTxMessage meterStateMsg(CanCategory::NBC, 0x412, 8, 0);
+		meterStateMsg[0] = 0x62;
+		meterStateMsg[1] = 0x00;
+		meterStateMsg[2] = 0x05;
+		meterStateMsg[3] = 0xD7;
+		meterStateMsg[4] = 0x8C;
+		meterStateMsg[5] = 0x61;
+		meterStateMsg[6] = 0x01;
+		meterStateMsg[7] = 0xFF;
+
 		CanTxMessage engineStateMsg(CanCategory::NBC, 0x416, 8, 0);
-		engineStateMsg[0] = 0x75;
+		engineStateMsg[0] = 0x76;
 		engineStateMsg[1] = 0x00;
 		engineStateMsg[2] = 0x00;
 		engineStateMsg[3] = 0x00;
@@ -323,7 +323,7 @@ void boardUpdateDash(CanCycle cycle) {
 		engineStateMsg[7] = 0x00;
 	}
 
-	if (cycle.isInterval(CI::_200ms)) {
+	if (cycle.isInterval(CI::_40ms)) {
 		CanTxMessage keepaliveMsg(CanCategory::NBC, 0x584, 1, 0);
 		keepaliveMsg[0] = 0xC0;
 	}
@@ -382,6 +382,7 @@ static void colt_slowCallback() {
 	}
 #endif // EFI_BOOTLOADER
 }
+
 
 
 
