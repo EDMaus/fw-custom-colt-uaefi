@@ -280,20 +280,20 @@ void boardUpdateDash(CanCycle cycle) {
 		clusterMsg[0] = 0x03;
 		clusterMsg[1] = 0x00;
 		clusterMsg[2] = 0x00;
-		clusterMsg[3] = 0x08;
+		clusterMsg[3] = 0x09;
 		clusterMsg[4] = 0x2E;
 		clusterMsg[5] = 0xBC;
 
 		CanTxMessage acMsg(CanCategory::NBC, 0x443, 6, 0);
 		acMsg[0] = 0x00;
-		acMsg[1] = 0x01;
+		acMsg[1] = 0x02;
 		acMsg[2] = 0x00;
 		acMsg[3] = 0x00;
 		acMsg[4] = 0x00;
 		acMsg[5] = 0x00;
 
 		CanTxMessage fanStatusMsg(CanCategory::NBC, 0x408, 8, 0);
-		fanStatusMsg[0] = 0x11;
+		fanStatusMsg[0] = 0x0F;
 		fanStatusMsg[1] = 0x00;
 		fanStatusMsg[2] = 0x64;
 		fanStatusMsg[3] = 0xFF;
@@ -303,17 +303,17 @@ void boardUpdateDash(CanCycle cycle) {
 		fanStatusMsg[7] = 0x00;
 
 		CanTxMessage meterStateMsg(CanCategory::NBC, 0x412, 8, 0);
-		meterStateMsg[0] = 0x62;
+		meterStateMsg[0] = 0x5A;
 		meterStateMsg[1] = 0x00;
 		meterStateMsg[2] = 0x05;
 		meterStateMsg[3] = 0xD7;
 		meterStateMsg[4] = 0x8C;
-		meterStateMsg[5] = 0x61;
+		meterStateMsg[5] = 0x5D;
 		meterStateMsg[6] = 0x01;
 		meterStateMsg[7] = 0xFF;
 
 		CanTxMessage engineStateMsg(CanCategory::NBC, 0x416, 8, 0);
-		engineStateMsg[0] = 0x76;
+		engineStateMsg[0] = 0x74;
 		engineStateMsg[1] = 0x00;
 		engineStateMsg[2] = 0x00;
 		engineStateMsg[3] = 0x00;
@@ -387,6 +387,7 @@ static void colt_slowCallback() {
 	}
 #endif // EFI_BOOTLOADER
 }
+
 
 
 
