@@ -232,108 +232,9 @@ int getBoardMetaDcOutputsCount() {
 }
 
 #if !defined(EFI_BOOTLOADER) && EFI_CAN_SUPPORT
-
-static uint16_t encodeColtDashRpm(float rpm) {
-    if (rpm < 0) {
-        rpm = 0;
-    }
-
-    uint32_t raw = (uint32_t)((rpm * 1024.0f / 1000.0f) + 0.5f);
-
-    if (raw > 0xFFFF) {
-        raw = 0xFFFF;
-    }
-
-    return (uint16_t)raw;
-}
-
 void boardUpdateDash(CanCycle cycle) {
-	if (cycle.isInterval(CI::_10ms)) {
-		const uint16_t rawRpm = encodeColtDashRpm(Sensor::getOrZero(SensorType::Rpm));
-
-		CanTxMessage rpmMsg(CanCategory::NBC, 0x308, 8, 0);
-
-		uint8_t dashStatus = 0x04;
-		const bool milOn = false;
-		const bool oilOn = true;
-
-		if (milOn) {
-			dashStatus |= 0x02;
-		}
-
-		if (!oilOn) {
-			dashStatus &= static_cast<uint8_t>(~0x04);
-		}
-
-		rpmMsg[0] = 0x00;
-		rpmMsg[1] = (rawRpm >> 8) & 0xFF;
-		rpmMsg[2] = rawRpm & 0xFF;
-		rpmMsg[3] = dashStatus;
-		rpmMsg[4] = 0x00;
-		rpmMsg[5] = 0x30;
-		rpmMsg[6] = 0xFF;
-		rpmMsg[7] = 0x00;
-	}
-
-	if (cycle.isInterval(CI::_100ms)) {
-		CanTxMessage clusterMsg(CanCategory::NBC, 0x423, 6, 0);
-		clusterMsg[0] = 0x03;
-		clusterMsg[1] = 0x00;
-		clusterMsg[2] = 0x00;
-		clusterMsg[3] = 0x09;
-		clusterMsg[4] = 0x2E;
-		clusterMsg[5] = 0xBC;
-
-		CanTxMessage acMsg(CanCategory::NBC, 0x443, 6, 0);
-		acMsg[0] = 0x00;
-		acMsg[1] = 0x02;
-		acMsg[2] = 0x00;
-		acMsg[3] = 0x00;
-		acMsg[4] = 0x00;
-		acMsg[5] = 0x00;
-
-		CanTxMessage fanStatusMsg(CanCategory::NBC, 0x408, 8, 0);
-		fanStatusMsg[0] = 0x0F;
-		fanStatusMsg[1] = 0x00;
-		fanStatusMsg[2] = 0x64;
-		fanStatusMsg[3] = 0xFF;
-		fanStatusMsg[4] = 0xFE;
-		fanStatusMsg[5] = 0xC3;
-		fanStatusMsg[6] = 0x4F;
-		fanStatusMsg[7] = 0x00;
-
-		CanTxMessage meterStateMsg(CanCategory::NBC, 0x412, 8, 0);
-		meterStateMsg[0] = 0x5A;
-		meterStateMsg[1] = 0x00;
-		meterStateMsg[2] = 0x05;
-		meterStateMsg[3] = 0xD7;
-		meterStateMsg[4] = 0x8C;
-		meterStateMsg[5] = 0x5D;
-		meterStateMsg[6] = 0x01;
-		meterStateMsg[7] = 0xFF;
-
-		CanTxMessage engineStateMsg(CanCategory::NBC, 0x416, 8, 0);
-		engineStateMsg[0] = 0x74;
-		engineStateMsg[1] = 0x00;
-		engineStateMsg[2] = 0x00;
-		engineStateMsg[3] = 0x00;
-		engineStateMsg[4] = 0x00;
-		engineStateMsg[5] = 0x00;
-		engineStateMsg[6] = 0x00;
-		engineStateMsg[7] = 0x00;
-	}
-
-	if (cycle.isInterval(CI::_20ms)) {
-		static bool sendKeepaliveThisTick = false;
-		sendKeepaliveThisTick = !sendKeepaliveThisTick;
-
-		if (sendKeepaliveThisTick) {
-			CanTxMessage keepaliveMsg(CanCategory::NBC, 0x584, 1, 0);
-			keepaliveMsg[0] = 0xC0;
-		}
-	}
+	processColtCanTx(cycle);
 }
-
 #endif // !EFI_BOOTLOADER && EFI_CAN_SUPPORT
 
 static void colt_fastCallback();
@@ -371,7 +272,6 @@ static void colt_fastCallback() {
 }
 #else
 static void colt_fastCallback() {
-	processColtCanTx();
 }
 #endif
 

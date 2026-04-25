@@ -1,0 +1,57 @@
+diff --git a/boards/uaefi_pro/board_configuration.cpp b/boards/uaefi_pro/board_configuration.cpp
+--- a/boards/uaefi_pro/board_configuration.cpp
++++ b/boards/uaefi_pro/board_configuration.cpp
+@@ -14,6 +14,9 @@
+ 
+ #ifndef EFI_BOOTLOADER
+ #include "AemXSeriesLambda.h"
++#if EFI_CAN_SUPPORT
++#include "can_msg_tx.h"
++#endif // EFI_CAN_SUPPORT
+ #endif // EFI_BOOTLOADER
+ 
+ static void setInjectorPins() {
+@@ -230,6 +233,43 @@ int getBoardMetaDcOutputsCount() {
+     return 2;
+ }
+ 
++#if !defined(EFI_BOOTLOADER) && EFI_CAN_SUPPORT
++
++static uint16_t encodeColtDashRpm(float rpm) {
++    if (rpm < 0) {
++        rpm = 0;
++    }
++
++    uint32_t raw = (uint32_t)((rpm * 1024.0f / 1000.0f) + 0.5f);
++
++    if (raw > 0xFFFF) {
++        raw = 0xFFFF;
++    }
++
++    return (uint16_t)raw;
++}
++
++void boardUpdateDash(CanCycle cycle) {
++    if (!cycle.isInterval(CI::_10ms)) {
++        return;
++    }
++
++    const uint16_t rawRpm = encodeColtDashRpm(Sensor::getOrZero(SensorType::Rpm));
++
++    CanTxMessage msg(CanCategory::NBC, 0x308, 8);
++
++    msg[0] = 0x00;
++    msg[1] = (rawRpm >> 8) & 0xFF;
++    msg[2] = rawRpm & 0xFF;
++    msg[3] = 0x00;
++    msg[4] = 0x00;
++    msg[5] = 0x00;
++    msg[6] = 0x00;
++    msg[7] = 0x00;
++}
++
++#endif // !EFI_BOOTLOADER && EFI_CAN_SUPPORT
++
+ static void colt_fastCallback();
+ static void colt_slowCallback();
+ 
