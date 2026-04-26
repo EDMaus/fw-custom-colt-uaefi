@@ -55,21 +55,12 @@ static bool isEngineRunning() {
 	return getCurrentRpm() > 400;
 }
 
-static bool hasBatteryWarning() {
-	const float vbatt = Sensor::getOrZero(SensorType::BatteryVoltage);
-	return vbatt > 1.0f && vbatt < 11.8f;
-}
-
-static bool hasMilWarning() {
-	return false;
-}
-
-static bool oilStatusBit() {
-	return true;
-}
-
 static bool isAcRequested() {
 	return g_coltCanState.acRequest;
+}
+
+static bool isBrakePressed() {
+	return g_coltCanState.brakePressed;
 }
 
 static uint16_t encodeColtDashRpm(float rpm) {
@@ -138,8 +129,20 @@ static uint8_t encode212Byte5(float tpsPercent) {
 
 static void sendFrame212() {
 	CanTxMessage msg(CanCategory::NBC, 0x212, 8, COLT_CAN_BUS);
-	msg[0] = isEngineRunning() ? 0x03 : 0x05;
-	msg[1] = isEngineRunning() ? 0x92 : 0x66;
+	if (isEngineRunning()) {
+		msg[0] = 0x04;
+		msg[1] = 0x3D;
+		msg[2] = 0x00;
+		msg[3] = 0x00;
+		msg[4] = 0x68;
+		msg[5] = 0x15;
+		msg[6] = 0x00;
+		msg[7] = 0x00;
+		return;
+	}
+
+	msg[0] = 0x05;
+	msg[1] = 0x66;
 	msg[2] = 0x00;
 	msg[3] = 0x00;
 	msg[4] = 0x68;
@@ -162,21 +165,37 @@ static void sendFrame308() {
 		msg[5] = isAcRequested() ? 0x45 : 0x52;
 		msg[6] = 0xFF;
 	} else {
-		uint8_t dashStatus = 0x04;
-		if (hasMilWarning()) {
-			dashStatus |= 0x02;
-		}
-
-		if (!oilStatusBit()) {
-			dashStatus &= static_cast<uint8_t>(~0x04);
-		}
-
-		msg[3] = dashStatus;
-		msg[4] = hasBatteryWarning() ? 0x10 : 0x00;
-		msg[5] = 0x33;
+		msg[3] = 0x04;
+		msg[4] = 0x00;
+		msg[5] = 0x30;
 	}
 	msg[6] = 0xFF;
 	msg[7] = 0x00;
+}
+
+static void sendFrame312() {
+	CanTxMessage msg(CanCategory::NBC, 0x312, 8, COLT_CAN_BUS);
+
+	if (isEngineRunning()) {
+		msg[0] = 0x07;
+		msg[1] = 0xED;
+		msg[2] = 0x07;
+		msg[3] = 0xED;
+		msg[4] = 0x09;
+		msg[5] = 0x75;
+		msg[6] = 0x07;
+		msg[7] = 0x9F;
+		return;
+	}
+
+	msg[0] = 0x07;
+	msg[1] = 0x6F;
+	msg[2] = 0x07;
+	msg[3] = 0x6F;
+	msg[4] = 0x09;
+	msg[5] = 0x00;
+	msg[6] = 0x07;
+	msg[7] = 0x8E;
 }
 
 static void sendFrame408() {
@@ -205,12 +224,12 @@ static void sendFrame408() {
 
 static void sendFrame412() {
 	CanTxMessage msg(CanCategory::NBC, 0x412, 8, COLT_CAN_BUS);
-	msg[0] = g_coltCanState.brakePressed ? 0x58 : 0x5A;
+	msg[0] = isBrakePressed() ? 0x58 : 0x5A;
 	msg[1] = 0x00;
 	msg[2] = 0x05;
 	msg[3] = 0xD7;
 	msg[4] = 0x8C;
-	msg[5] = g_coltCanState.brakePressed ? 0x5C : 0x5D;
+	msg[5] = isBrakePressed() ? 0x5C : 0x5D;
 	msg[6] = 0x01;
 	msg[7] = 0xFF;
 }
@@ -220,7 +239,7 @@ static void sendFrame416() {
 
 	CanTxMessage msg(CanCategory::NBC, 0x416, 8, COLT_CAN_BUS);
 	if (!isEngineRunning()) {
-		msg[0] = g_coltCanState.brakePressed ? 0x72 : 0x74;
+		msg[0] = 0x74;
 	} else if (rpm < 900) {
 		msg[0] = 0x8D;
 	} else if (rpm < 1100) {
@@ -243,9 +262,7 @@ static void sendFrame423() {
 	const int rpm = getCurrentRpm();
 
 	CanTxMessage msg(CanCategory::NBC, 0x423, 6, COLT_CAN_BUS);
-	if (!isEngineRunning()) {
-		msg[0] = 0x01;
-	} else if (rpm > 1200) {
+	if (rpm > 1200) {
 		msg[0] = 0x07;
 	} else {
 		msg[0] = 0x03;
@@ -272,6 +289,31 @@ static void sendFrame584() {
 	msg[0] = 0xC0;
 }
 
+static void sendFrame608() {
+	CanTxMessage msg(CanCategory::NBC, 0x608, 8, COLT_CAN_BUS);
+
+	if (isEngineRunning()) {
+		msg[0] = 0x57;
+		msg[1] = 0x00;
+		msg[2] = 0x18;
+		msg[3] = 0xC3;
+		msg[4] = 0xFF;
+		msg[5] = 0x00;
+		msg[6] = 0x6B;
+		msg[7] = 0x00;
+		return;
+	}
+
+	msg[0] = 0x34;
+	msg[1] = 0x00;
+	msg[2] = 0x18;
+	msg[3] = 0xC3;
+	msg[4] = 0xFF;
+	msg[5] = 0x00;
+	msg[6] = 0x00;
+	msg[7] = 0x00;
+}
+
 } // namespace
 #endif // !EFI_BOOTLOADER && EFI_CAN_SUPPORT
 
@@ -285,27 +327,26 @@ void processColtCanTx(CanCycle cycle) {
 #if !defined(EFI_BOOTLOADER) && EFI_CAN_SUPPORT
 	if (cycle.isInterval(CI::_10ms)) {
 		sendFrame0C0();
-		sendFrame308();
 	}
 
 	if (cycle.isInterval(CI::_20ms)) {
 		sendFrame210();
 		sendFrame212();
+		sendFrame308();
+		sendFrame312();
+		sendFrame443();
+	}
 
-		static bool sendKeepaliveThisTick = false;
-		sendKeepaliveThisTick = !sendKeepaliveThisTick;
-
-		if (sendKeepaliveThisTick) {
-			sendFrame584();
-		}
+	if (cycle.isInterval(CI::_50ms)) {
+		sendFrame423();
+		sendFrame584();
 	}
 
 	if (cycle.isInterval(CI::_100ms)) {
-		sendFrame423();
-		sendFrame443();
 		sendFrame408();
 		sendFrame412();
 		sendFrame416();
+		sendFrame608();
 	}
 #else
 	UNUSED(cycle);
