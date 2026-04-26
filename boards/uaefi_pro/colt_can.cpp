@@ -262,14 +262,18 @@ static void sendFrame423() {
 	const int rpm = getCurrentRpm();
 
 	CanTxMessage msg(CanCategory::NBC, 0x423, 6, COLT_CAN_BUS);
-	if (rpm > 1200) {
+	if (!isEngineRunning()) {
+		msg[0] = 0x01;
+	} else if (rpm > 1200) {
 		msg[0] = 0x07;
 	} else {
 		msg[0] = 0x03;
 	}
 	msg[1] = 0x00;
 	msg[2] = 0x00;
-	msg[3] = isAcRequested() ? 0x09 : 0x08;
+	// 0x423 carries body/light state. Keep it on the stable OEM baseline and
+	// do not mirror A/C request here - that already lives on 0x443.
+	msg[3] = isEngineRunning() ? 0x09 : 0x08;
 	msg[4] = 0x2E;
 	msg[5] = 0xBC;
 }
@@ -335,11 +339,14 @@ void processColtCanTx(CanCycle cycle) {
 		sendFrame308();
 		sendFrame312();
 		sendFrame443();
-	}
 
-	if (cycle.isInterval(CI::_50ms)) {
-		sendFrame423();
-		sendFrame584();
+		static bool send40msThisTick = false;
+		send40msThisTick = !send40msThisTick;
+
+		if (send40msThisTick) {
+			sendFrame423();
+			sendFrame584();
+		}
 	}
 
 	if (cycle.isInterval(CI::_100ms)) {
