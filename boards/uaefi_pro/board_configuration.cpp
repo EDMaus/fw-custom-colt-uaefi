@@ -279,6 +279,12 @@ static void colt_fastCallback() {
 
 static void colt_slowCallback() {
 #ifndef EFI_BOOTLOADER
+	if (!isIgnVoltage()) {
+		// Safety net for key-style cranking: never leave the starter output
+		// asserted once ignition power disappears.
+		enginePins.starterControl.getAndSet(0);
+	}
+
 	extern AemXSeriesWideband aem1;
 
 	if (aem1.hasSeenRx) {
