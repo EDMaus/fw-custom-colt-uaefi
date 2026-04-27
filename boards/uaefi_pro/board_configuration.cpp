@@ -116,10 +116,10 @@ static void setupColtIo() {
 	engineConfiguration->starterControlPin = Gpio::MM100_IGN8; // B8 starter relay low-side
 	engineConfiguration->starterControlPinMode = OM_DEFAULT;
 
-	// Reserve B17 for the variable A/C compressor control solenoid. This stays
+	// Reserve B18 for the variable A/C compressor control solenoid. This stays
 	// gated off unless the CAN-side A/C request is active.
 	auto& acCompressorPwm = engineConfiguration->gppwm[0];
-	acCompressorPwm.pin = Gpio::MM100_OUT_PWM1; // B17
+	acCompressorPwm.pin = Gpio::MM100_INJ8; // B18
 	acCompressorPwm.pwmFrequency = 250;
 	acCompressorPwm.dutyIfError = 0;
 	acCompressorPwm.rpmAxis = GPPWM_Rpm;
@@ -278,7 +278,7 @@ static void colt_slowCallback();
 
 expected<float> boardOverrideGppwm(size_t index) {
 #ifndef EFI_BOOTLOADER
-	// GPPWM#1 is reserved for the variable A/C compressor solenoid on B17.
+	// GPPWM#1 is reserved for the variable A/C compressor solenoid on B18.
 	// Keep it de-energized unless the cluster/HVAC side is actually
 	// requesting A/C and the engine is running.
 	if (index == 0) {
