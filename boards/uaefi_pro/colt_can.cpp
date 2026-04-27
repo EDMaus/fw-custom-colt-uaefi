@@ -59,6 +59,10 @@ static bool isAcRequested() {
 	return g_coltCanState.acRequest;
 }
 
+static bool isAcCompressorCommanded() {
+	return isEngineRunning() && isAcRequested();
+}
+
 static bool isBrakePressed() {
 	return g_coltCanState.brakePressed;
 }
@@ -162,7 +166,7 @@ static void sendFrame308() {
 	if (isEngineRunning()) {
 		msg[3] = 0x00;
 		msg[4] = 0x00;
-		msg[5] = isAcRequested() ? 0x45 : 0x52;
+		msg[5] = isAcCompressorCommanded() ? 0x45 : 0x52;
 		msg[6] = 0xFF;
 	} else {
 		msg[3] = 0x04;
@@ -200,7 +204,7 @@ static void sendFrame312() {
 
 static void sendFrame408() {
 	CanTxMessage msg(CanCategory::NBC, 0x408, 8, COLT_CAN_BUS);
-	if (isEngineRunning() && isAcRequested()) {
+	if (isAcCompressorCommanded()) {
 		msg[0] = 0x0F;
 		msg[1] = 0x00;
 		msg[2] = 0x6F;
@@ -324,6 +328,14 @@ static void sendFrame608() {
 void initColtCan() {
 #if !defined(EFI_BOOTLOADER) && EFI_CAN_SUPPORT
 	g_coltCanState = {};
+#endif
+}
+
+bool isColtAcRequested() {
+#if !defined(EFI_BOOTLOADER) && EFI_CAN_SUPPORT
+	return g_coltCanState.acRequest;
+#else
+	return false;
 #endif
 }
 

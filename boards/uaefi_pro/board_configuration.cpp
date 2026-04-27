@@ -116,6 +116,40 @@ static void setupColtIo() {
 	engineConfiguration->starterControlPin = Gpio::MM100_IGN8; // B8 starter relay low-side
 	engineConfiguration->starterControlPinMode = OM_DEFAULT;
 
+	// Reserve B17 for the variable A/C compressor control solenoid. This stays
+	// gated off unless the CAN-side A/C request is active.
+	auto& acCompressorPwm = engineConfiguration->gppwm[0];
+	acCompressorPwm.pin = Gpio::MM100_OUT_PWM1; // B17
+	acCompressorPwm.pwmFrequency = 250;
+	acCompressorPwm.dutyIfError = 0;
+	acCompressorPwm.rpmAxis = GPPWM_Rpm;
+	acCompressorPwm.loadAxis = GPPWM_Zero;
+	chsnprintf(engineConfiguration->gpPwmNote[0], sizeof(engineConfiguration->gpPwmNote[0]), "AC Comp Sol");
+
+	for (size_t load = 0; load < efi::size(acCompressorPwm.table); load++) {
+		acCompressorPwm.loadBins[load] = 0;
+		for (size_t rpm = 0; rpm < efi::size(acCompressorPwm.table[load]); rpm++) {
+			int rpmBin = 1000 * rpm;
+			uint8_t duty = 20;
+
+			if (rpmBin <= 1000) {
+				duty = 30;
+			} else if (rpmBin <= 2500) {
+				duty = 25;
+			} else if (rpmBin <= 4500) {
+				duty = 20;
+			} else {
+				duty = 15;
+			}
+
+			acCompressorPwm.table[load][rpm] = duty;
+		}
+	}
+
+	for (size_t rpm = 0; rpm < efi::size(acCompressorPwm.rpmBins); rpm++) {
+		acCompressorPwm.rpmBins[rpm] = 1000 * rpm;
+	}
+
 	// Optional A/C input later if needed
 	// engineConfiguration->acSwitch = Gpio::MM100_IN_BUTTON2;
 	// engineConfiguration->acSwitchMode = PI_PULLUP;
@@ -241,6 +275,23 @@ void boardUpdateDash(CanCycle cycle) {
 
 static void colt_fastCallback();
 static void colt_slowCallback();
+
+expected<float> boardOverrideGppwm(size_t index) {
+#ifndef EFI_BOOTLOADER
+	// GPPWM#1 is reserved for the variable A/C compressor solenoid on B17.
+	// Keep it de-energized unless the cluster/HVAC side is actually
+	// requesting A/C and the engine is running.
+	if (index == 0) {
+		if (!engine->rpmCalculator.isRunning() || !isColtAcRequested()) {
+			return 0.0f;
+		}
+	}
+#else
+	UNUSED(index);
+#endif
+
+	return unexpected;
+}
 
 void setup_custom_board_overrides() {
 	custom_board_DefaultConfiguration = colt_boardDefaultConfiguration;
