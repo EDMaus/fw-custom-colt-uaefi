@@ -55,16 +55,16 @@ static bool isEngineRunning() {
 	return getCurrentRpm() > 400;
 }
 
+static bool isIgnitionOn() {
+	return isIgnVoltage();
+}
+
 static bool isAcRequested() {
 	return g_coltCanState.acRequest;
 }
 
 static bool isAcCompressorCommanded() {
 	return isEngineRunning() && isAcRequested();
-}
-
-static bool isBrakePressed() {
-	return g_coltCanState.brakePressed;
 }
 
 static uint16_t encodeColtDashRpm(float rpm) {
@@ -109,28 +109,6 @@ static void sendFrame210() {
 	msg[7] = 0xFF;
 }
 
-static uint8_t encode212Byte5(float tpsPercent) {
-	tpsPercent = clampPercent(tpsPercent);
-
-	if (tpsPercent < 5.0f) {
-		return 0xE0;
-	}
-
-	if (tpsPercent < 25.0f) {
-		return 0xE9;
-	}
-
-	if (tpsPercent < 60.0f) {
-		return 0xEE;
-	}
-
-	if (tpsPercent < 85.0f) {
-		return 0xF7;
-	}
-
-	return 0xFA;
-}
-
 static void sendFrame212() {
 	CanTxMessage msg(CanCategory::NBC, 0x212, 8, COLT_CAN_BUS);
 	if (isEngineRunning()) {
@@ -150,7 +128,7 @@ static void sendFrame212() {
 	msg[2] = 0x00;
 	msg[3] = 0x00;
 	msg[4] = 0x68;
-	msg[5] = encode212Byte5(getThrottlePercent());
+	msg[5] = 0xE9;
 	msg[6] = 0x00;
 	msg[7] = 0x00;
 }
@@ -169,9 +147,10 @@ static void sendFrame308() {
 		msg[5] = isAcCompressorCommanded() ? 0x45 : 0x52;
 		msg[6] = 0xFF;
 	} else {
+		msg[0] = 0x80;
 		msg[3] = 0x04;
 		msg[4] = 0x00;
-		msg[5] = 0x30;
+		msg[5] = 0x33;
 	}
 	msg[6] = 0xFF;
 	msg[7] = 0x00;
@@ -216,24 +195,24 @@ static void sendFrame408() {
 		return;
 	}
 
-	msg[0] = 0x0F;
+	msg[0] = 0x0E;
 	msg[1] = 0x00;
-	msg[2] = isEngineRunning() ? 0x63 : 0x64;
+	msg[2] = 0x64;
 	msg[3] = 0xFF;
-	msg[4] = 0xFE;
-	msg[5] = g_coltCanState.brakePressed ? 0xC4 : 0xC3;
-	msg[6] = g_coltCanState.brakePressed ? 0xF0 : 0x4F;
+	msg[4] = 0x0E;
+	msg[5] = 0xC3;
+	msg[6] = 0x4F;
 	msg[7] = 0x00;
 }
 
 static void sendFrame412() {
 	CanTxMessage msg(CanCategory::NBC, 0x412, 8, COLT_CAN_BUS);
-	msg[0] = isBrakePressed() ? 0x58 : 0x5A;
+	msg[0] = 0x56;
 	msg[1] = 0x00;
 	msg[2] = 0x05;
 	msg[3] = 0xD7;
 	msg[4] = 0x8C;
-	msg[5] = isBrakePressed() ? 0x5C : 0x5D;
+	msg[5] = 0x5B;
 	msg[6] = 0x01;
 	msg[7] = 0xFF;
 }
@@ -243,7 +222,7 @@ static void sendFrame416() {
 
 	CanTxMessage msg(CanCategory::NBC, 0x416, 8, COLT_CAN_BUS);
 	if (!isEngineRunning()) {
-		msg[0] = 0x74;
+		msg[0] = 0x7A;
 	} else if (rpm < 900) {
 		msg[0] = 0x8D;
 	} else if (rpm < 1100) {
@@ -267,17 +246,17 @@ static void sendFrame423() {
 
 	CanTxMessage msg(CanCategory::NBC, 0x423, 6, COLT_CAN_BUS);
 	if (!isEngineRunning()) {
-		msg[0] = 0x01;
+		msg[0] = 0x03;
 	} else if (rpm > 1200) {
 		msg[0] = 0x07;
 	} else {
 		msg[0] = 0x03;
 	}
 	msg[1] = 0x00;
-	msg[2] = 0x00;
+	msg[2] = 0x02;
 	// 0x423 carries body/light state. Keep it on the stable OEM baseline and
 	// do not mirror A/C request here - that already lives on 0x443.
-	msg[3] = isEngineRunning() ? 0x09 : 0x08;
+	msg[3] = 0x08;
 	msg[4] = 0x2E;
 	msg[5] = 0xBC;
 }
@@ -312,7 +291,7 @@ static void sendFrame608() {
 		return;
 	}
 
-	msg[0] = 0x34;
+	msg[0] = 0x33;
 	msg[1] = 0x00;
 	msg[2] = 0x18;
 	msg[3] = 0xC3;
@@ -341,6 +320,10 @@ bool isColtAcRequested() {
 
 void processColtCanTx(CanCycle cycle) {
 #if !defined(EFI_BOOTLOADER) && EFI_CAN_SUPPORT
+	if (!isIgnitionOn()) {
+		return;
+	}
+
 	if (cycle.isInterval(CI::_10ms)) {
 		sendFrame0C0();
 	}
