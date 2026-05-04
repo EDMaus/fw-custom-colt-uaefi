@@ -67,6 +67,10 @@ static bool isAcCompressorCommanded() {
 	return isEngineRunning() && isAcRequested();
 }
 
+static bool shouldUseOemKeyOnBaseline() {
+	return isIgnitionOn() && !isEngineRunning();
+}
+
 static uint16_t encodeColtDashRpm(float rpm) {
 	if (rpm < 0) {
 		rpm = 0;
@@ -128,7 +132,7 @@ static void sendFrame212() {
 	msg[2] = 0x00;
 	msg[3] = 0x00;
 	msg[4] = 0x68;
-	msg[5] = 0xE9;
+	msg[5] = 0xEC;
 	msg[6] = 0x00;
 	msg[7] = 0x00;
 }
@@ -147,9 +151,9 @@ static void sendFrame308() {
 		msg[5] = isAcCompressorCommanded() ? 0x45 : 0x52;
 		msg[6] = 0xFF;
 	} else {
-		msg[0] = 0x80;
-		msg[3] = 0x04;
-		msg[4] = 0x00;
+		msg[0] = 0x00;
+		msg[3] = 0x06;
+		msg[4] = 0x01;
 		msg[5] = 0x33;
 	}
 	msg[6] = 0xFF;
@@ -183,7 +187,7 @@ static void sendFrame312() {
 
 static void sendFrame408() {
 	CanTxMessage msg(CanCategory::NBC, 0x408, 8, COLT_CAN_BUS);
-	if (isAcCompressorCommanded()) {
+	if (!shouldUseOemKeyOnBaseline() && isAcCompressorCommanded()) {
 		msg[0] = 0x0F;
 		msg[1] = 0x00;
 		msg[2] = 0x6F;
@@ -195,25 +199,25 @@ static void sendFrame408() {
 		return;
 	}
 
-	msg[0] = 0x0E;
+	msg[0] = 0xFF;
 	msg[1] = 0x00;
-	msg[2] = 0x64;
+	msg[2] = 0xFF;
 	msg[3] = 0xFF;
-	msg[4] = 0x0E;
-	msg[5] = 0xC3;
-	msg[6] = 0x4F;
+	msg[4] = 0xFE;
+	msg[5] = 0xFF;
+	msg[6] = 0xFF;
 	msg[7] = 0x00;
 }
 
 static void sendFrame412() {
 	CanTxMessage msg(CanCategory::NBC, 0x412, 8, COLT_CAN_BUS);
-	msg[0] = 0x56;
-	msg[1] = 0x00;
+	msg[0] = 0xFF;
+	msg[1] = 0xFF;
 	msg[2] = 0x05;
 	msg[3] = 0xD7;
 	msg[4] = 0x8C;
-	msg[5] = 0x5B;
-	msg[6] = 0x01;
+	msg[5] = 0x00;
+	msg[6] = 0x00;
 	msg[7] = 0xFF;
 }
 
@@ -222,7 +226,7 @@ static void sendFrame416() {
 
 	CanTxMessage msg(CanCategory::NBC, 0x416, 8, COLT_CAN_BUS);
 	if (!isEngineRunning()) {
-		msg[0] = 0x7A;
+		msg[0] = 0x77;
 	} else if (rpm < 900) {
 		msg[0] = 0x8D;
 	} else if (rpm < 1100) {
@@ -246,14 +250,14 @@ static void sendFrame423() {
 
 	CanTxMessage msg(CanCategory::NBC, 0x423, 6, COLT_CAN_BUS);
 	if (!isEngineRunning()) {
-		msg[0] = 0x03;
+		msg[0] = 0x01;
 	} else if (rpm > 1200) {
 		msg[0] = 0x07;
 	} else {
 		msg[0] = 0x03;
 	}
 	msg[1] = 0x00;
-	msg[2] = 0x02;
+	msg[2] = 0x00;
 	// 0x423 carries body/light state. Keep it on the stable OEM baseline and
 	// do not mirror A/C request here - that already lives on 0x443.
 	msg[3] = 0x08;
@@ -266,8 +270,8 @@ static void sendFrame443() {
 	// Keep key-on/engine-off on the OEM baseline. Letting HVAC request leak onto
 	// 0x443 before the engine is actually running appears to wake up A/C-related
 	// behavior (including fan activity) earlier than stock.
-	msg[0] = (isEngineRunning() && isAcRequested()) ? 0x01 : 0x00;
-	msg[1] = 0x02;
+	msg[0] = (!shouldUseOemKeyOnBaseline() && isAcRequested()) ? 0x01 : 0x00;
+	msg[1] = 0x00;
 	msg[2] = 0x00;
 	msg[3] = 0x00;
 	msg[4] = 0x00;
@@ -294,7 +298,7 @@ static void sendFrame608() {
 		return;
 	}
 
-	msg[0] = 0x33;
+	msg[0] = 0x34;
 	msg[1] = 0x00;
 	msg[2] = 0x18;
 	msg[3] = 0xC3;
@@ -336,6 +340,9 @@ void processColtCanTx(CanCycle cycle) {
 		sendFrame212();
 		sendFrame308();
 		sendFrame312();
+		// 0x443 is part of the HVAC/body conversation. Keep sending the OEM
+		// engine-off baseline so other modules continue to see the frame, but do
+		// not make it dynamic until the engine is actually running.
 		sendFrame443();
 
 		static bool send40msThisTick = false;
