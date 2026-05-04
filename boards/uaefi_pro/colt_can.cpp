@@ -263,7 +263,10 @@ static void sendFrame423() {
 
 static void sendFrame443() {
 	CanTxMessage msg(CanCategory::NBC, 0x443, 6, COLT_CAN_BUS);
-	msg[0] = isAcRequested() ? 0x01 : 0x00;
+	// Keep key-on/engine-off on the OEM baseline. Letting HVAC request leak onto
+	// 0x443 before the engine is actually running appears to wake up A/C-related
+	// behavior (including fan activity) earlier than stock.
+	msg[0] = (isEngineRunning() && isAcRequested()) ? 0x01 : 0x00;
 	msg[1] = 0x02;
 	msg[2] = 0x00;
 	msg[3] = 0x00;
