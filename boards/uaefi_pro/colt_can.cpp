@@ -31,24 +31,8 @@ static uint8_t clampToU8(int value) {
 	return static_cast<uint8_t>(value);
 }
 
-static float clampPercent(float value) {
-	if (value < 0.0f) {
-		return 0.0f;
-	}
-
-	if (value > 100.0f) {
-		return 100.0f;
-	}
-
-	return value;
-}
-
 static int getCurrentRpm() {
 	return static_cast<int>(Sensor::getOrZero(SensorType::Rpm));
-}
-
-static float getThrottlePercent() {
-	return clampPercent(Sensor::getOrZero(SensorType::Tps1));
 }
 
 static bool isEngineRunning() {
@@ -61,10 +45,6 @@ static bool isIgnitionOn() {
 
 static bool isAcRequested() {
 	return g_coltCanState.acRequest;
-}
-
-static bool isAcCompressorCommanded() {
-	return isEngineRunning() && isAcRequested();
 }
 
 static bool shouldUseOemKeyOnBaseline() {
@@ -100,12 +80,10 @@ static void sendFrame0C0() {
 }
 
 static void sendFrame210() {
-	const uint8_t scaledTps = clampToU8(static_cast<int>((getThrottlePercent() * 250.0f) / 100.0f));
-
 	CanTxMessage msg(CanCategory::NBC, 0x210, 8, COLT_CAN_BUS);
 	msg[0] = 0x00;
 	msg[1] = 0x00;
-	msg[2] = scaledTps;
+	msg[2] = 0x00;
 	msg[3] = isEngineRunning() ? 0x40 : 0x00;
 	msg[4] = 0x00;
 	msg[5] = 0x00;
@@ -116,12 +94,12 @@ static void sendFrame210() {
 static void sendFrame212() {
 	CanTxMessage msg(CanCategory::NBC, 0x212, 8, COLT_CAN_BUS);
 	if (isEngineRunning()) {
-		msg[0] = 0x04;
-		msg[1] = 0x3D;
+		msg[0] = 0x03;
+		msg[1] = 0xA1;
 		msg[2] = 0x00;
 		msg[3] = 0x00;
 		msg[4] = 0x68;
-		msg[5] = 0x15;
+		msg[5] = 0x12;
 		msg[6] = 0x00;
 		msg[7] = 0x00;
 		return;
@@ -148,7 +126,7 @@ static void sendFrame308() {
 	if (isEngineRunning()) {
 		msg[3] = 0x00;
 		msg[4] = 0x00;
-		msg[5] = isAcCompressorCommanded() ? 0x45 : 0x52;
+		msg[5] = 0x52;
 		msg[6] = 0xFF;
 	} else {
 		msg[0] = 0x00;
@@ -169,7 +147,7 @@ static void sendFrame312() {
 		msg[2] = 0x07;
 		msg[3] = 0xED;
 		msg[4] = 0x09;
-		msg[5] = 0x75;
+		msg[5] = 0x58;
 		msg[6] = 0x07;
 		msg[7] = 0x9F;
 		return;
@@ -187,14 +165,14 @@ static void sendFrame312() {
 
 static void sendFrame408() {
 	CanTxMessage msg(CanCategory::NBC, 0x408, 8, COLT_CAN_BUS);
-	if (!shouldUseOemKeyOnBaseline() && isAcCompressorCommanded()) {
-		msg[0] = 0x0F;
+	if (isEngineRunning()) {
+		msg[0] = 0x0E;
 		msg[1] = 0x00;
-		msg[2] = 0x6F;
-		msg[3] = 0xFF;
-		msg[4] = 0xEC;
-		msg[5] = 0x34;
-		msg[6] = 0xF0;
+		msg[2] = 0x64;
+		msg[3] = 0x64;
+		msg[4] = 0xFE;
+		msg[5] = 0xC3;
+		msg[6] = 0x4F;
 		msg[7] = 0x00;
 		return;
 	}
@@ -211,13 +189,25 @@ static void sendFrame408() {
 
 static void sendFrame412() {
 	CanTxMessage msg(CanCategory::NBC, 0x412, 8, COLT_CAN_BUS);
+	if (isEngineRunning()) {
+		msg[0] = 0x58;
+		msg[1] = 0x00;
+		msg[2] = 0x05;
+		msg[3] = 0xD7;
+		msg[4] = 0x8C;
+		msg[5] = 0x5D;
+		msg[6] = 0x01;
+		msg[7] = 0xFF;
+		return;
+	}
+
 	msg[0] = 0xFF;
 	msg[1] = 0xFF;
 	msg[2] = 0x05;
 	msg[3] = 0xD7;
 	msg[4] = 0x8C;
 	msg[5] = 0x00;
-	msg[6] = 0x00;
+	msg[6] = 0x01;
 	msg[7] = 0xFF;
 }
 
@@ -226,7 +216,7 @@ static void sendFrame416() {
 
 	CanTxMessage msg(CanCategory::NBC, 0x416, 8, COLT_CAN_BUS);
 	if (!isEngineRunning()) {
-		msg[0] = 0x77;
+		msg[0] = 0x79;
 	} else if (rpm < 900) {
 		msg[0] = 0x8D;
 	} else if (rpm < 1100) {
@@ -246,21 +236,16 @@ static void sendFrame416() {
 }
 
 static void sendFrame423() {
-	const int rpm = getCurrentRpm();
-
 	CanTxMessage msg(CanCategory::NBC, 0x423, 6, COLT_CAN_BUS);
 	if (!isEngineRunning()) {
 		msg[0] = 0x01;
-	} else if (rpm > 1200) {
-		msg[0] = 0x07;
+		msg[3] = 0x08;
 	} else {
-		msg[0] = 0x03;
+		msg[0] = 0x07;
+		msg[3] = 0x09;
 	}
 	msg[1] = 0x00;
 	msg[2] = 0x00;
-	// 0x423 carries body/light state. Keep it on the stable OEM baseline and
-	// do not mirror A/C request here - that already lives on 0x443.
-	msg[3] = 0x08;
 	msg[4] = 0x2E;
 	msg[5] = 0xBC;
 }
@@ -287,13 +272,13 @@ static void sendFrame608() {
 	CanTxMessage msg(CanCategory::NBC, 0x608, 8, COLT_CAN_BUS);
 
 	if (isEngineRunning()) {
-		msg[0] = 0x57;
+		msg[0] = 0x64;
 		msg[1] = 0x00;
 		msg[2] = 0x18;
 		msg[3] = 0xC3;
 		msg[4] = 0xFF;
 		msg[5] = 0x00;
-		msg[6] = 0x6B;
+		msg[6] = 0x6A;
 		msg[7] = 0x00;
 		return;
 	}
