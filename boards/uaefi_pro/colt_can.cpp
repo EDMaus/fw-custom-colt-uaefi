@@ -155,134 +155,9 @@ static void sendFrame312() {
 	msg[7] = 0x8E;
 }
 
-static void sendFrame408() {
-	CanTxMessage msg(CanCategory::NBC, 0x408, 8, COLT_CAN_BUS);
-	if (isEngineRunning()) {
-		msg[0] = 0x0E;
-		msg[1] = 0x00;
-		msg[2] = 0x65;
-		msg[3] = 0x64;
-		msg[4] = 0xFE;
-		msg[5] = 0xC3;
-		msg[6] = 0x4F;
-		msg[7] = 0x00;
-		return;
-	}
-
-	msg[0] = 0x0F;
-	msg[1] = 0x00;
-	msg[2] = 0x63;
-	msg[3] = 0xFF;
-	msg[4] = 0xFE;
-	msg[5] = 0xC3;
-	msg[6] = 0x4F;
-	msg[7] = 0x00;
-}
-
-static void sendFrame412() {
-	CanTxMessage msg(CanCategory::NBC, 0x412, 8, COLT_CAN_BUS);
-	if (isEngineRunning()) {
-		msg[0] = 0x58;
-		msg[1] = 0x00;
-		msg[2] = 0x05;
-		msg[3] = 0xD7;
-		msg[4] = 0x8C;
-		msg[5] = 0x5C;
-		msg[6] = 0x01;
-		msg[7] = 0xFF;
-		return;
-	}
-
-	msg[0] = 0x58;
-	msg[1] = 0x00;
-	msg[2] = 0x05;
-	msg[3] = 0xD7;
-	msg[4] = 0x8C;
-	msg[5] = 0x5C;
-	msg[6] = 0x01;
-	msg[7] = 0xFF;
-}
-
-static void sendFrame416() {
-	const int rpm = getCurrentRpm();
-
-	CanTxMessage msg(CanCategory::NBC, 0x416, 8, COLT_CAN_BUS);
-	if (!isEngineRunning()) {
-		msg[0] = 0x75;
-	} else if (rpm < 900) {
-		msg[0] = 0x8D;
-	} else if (rpm < 1100) {
-		msg[0] = 0x8E;
-	} else if (rpm < 1500) {
-		msg[0] = 0x8F;
-	} else {
-		msg[0] = 0x90;
-	}
-	msg[1] = 0x00;
-	msg[2] = 0x00;
-	msg[3] = 0x00;
-	msg[4] = 0x00;
-	msg[5] = 0x00;
-	msg[6] = 0x00;
-	msg[7] = 0x00;
-}
-
-static void sendFrame423() {
-	CanTxMessage msg(CanCategory::NBC, 0x423, 6, COLT_CAN_BUS);
-	if (!isEngineRunning()) {
-		msg[0] = 0x03;
-		msg[3] = 0x09;
-	} else {
-		msg[0] = 0x07;
-		msg[3] = 0x09;
-	}
-	msg[1] = 0x00;
-	msg[2] = 0x00;
-	msg[4] = 0x2E;
-	msg[5] = 0xBC;
-}
-
-static void sendFrame443() {
-	CanTxMessage msg(CanCategory::NBC, 0x443, 6, COLT_CAN_BUS);
-	// Keep HVAC/body chatter on the dominant OEM baseline for now. The Colt HVAC
-	// module reacts badly to non-stock 0x443 payloads while we are debugging
-	// chime, door-lamp and recirculation flap behavior.
-	msg[0] = 0x00;
-	msg[1] = 0x02;
-	msg[2] = 0x00;
-	msg[3] = 0x00;
-	msg[4] = 0x00;
-	msg[5] = 0x00;
-}
-
 static void sendFrame584() {
 	CanTxMessage msg(CanCategory::NBC, 0x584, 1, COLT_CAN_BUS);
 	msg[0] = 0xC0;
-}
-
-static void sendFrame608() {
-	CanTxMessage msg(CanCategory::NBC, 0x608, 8, COLT_CAN_BUS);
-
-	if (isEngineRunning()) {
-		msg[0] = 0x66;
-		msg[1] = 0x00;
-		msg[2] = 0x18;
-		msg[3] = 0xC3;
-		msg[4] = 0xFF;
-		msg[5] = 0x00;
-		msg[6] = 0x65;
-		msg[7] = 0x00;
-		return;
-	}
-
-	msg[0] = 0x34;
-	msg[1] = 0x00;
-	msg[2] = 0x18;
-	msg[3] = 0xC3;
-	msg[4] = 0xFF;
-	msg[5] = 0x00;
-	msg[6] = 0x00;
-	msg[7] = 0x00;
 }
 
 } // namespace
@@ -317,11 +192,6 @@ void processColtCanTx(CanCycle cycle) {
 		sendFrame212();
 		sendFrame308();
 		sendFrame312();
-		sendFrame423();
-		// 0x443 is part of the HVAC/body conversation. Keep it fixed to the
-		// dominant OEM payload until chime and recirculation flap behavior is
-		// stable.
-		sendFrame443();
 
 		static bool send40msThisTick = false;
 		send40msThisTick = !send40msThisTick;
@@ -329,13 +199,6 @@ void processColtCanTx(CanCycle cycle) {
 		if (send40msThisTick) {
 			sendFrame584();
 		}
-	}
-
-	if (cycle.isInterval(CI::_100ms)) {
-		sendFrame408();
-		sendFrame412();
-		sendFrame416();
-		sendFrame608();
 	}
 #else
 	UNUSED(cycle);

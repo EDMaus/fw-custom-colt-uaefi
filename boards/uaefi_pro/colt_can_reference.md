@@ -23,13 +23,13 @@ engineering.
 | `0x300` | RX | ASC / traction / stability status | Medium | Used in firmware for ASC intervention state |
 | `0x308` | TX | Cluster engine info with RPM content | High | Tach/RPM-related |
 | `0x312` | TX | Companion cluster / engine frame | Medium | OEM-stable, byte meaning still partial |
-| `0x408` | TX | Key-state / ECU-state / body-state frame | High | Strongly correlated with fan/body behavior |
-| `0x412` | TX/RX | Key-state / ECU-state / meter/body frame | High | OEM key-on payload differs from older custom payloads |
-| `0x416` | TX | State-indicator frame | High | Distinguishes OFF / ACC / ON / running |
-| `0x423` | TX | Body / light / door-state frame | High | Confirmed by logs and prior Colt notes |
-| `0x443` | TX/RX | A/C request / A/C status frame | High | A/C request bit lives here |
+| `0x408` | Disabled TX | Key-state / ECU-state / body-state frame | High | Quarantined because another module appears to send this ID |
+| `0x412` | RX / Disabled TX | Key-state / ECU-state / meter/body frame | High | Quarantined because another module appears to send this ID |
+| `0x416` | Disabled TX | State-indicator frame | High | Quarantined because another module appears to send this ID |
+| `0x423` | Disabled TX | Body / light / door-state frame | High | Quarantined after door-lamp/chime conflicts |
+| `0x443` | RX / Disabled TX | A/C request / A/C status frame | High | Quarantined after HVAC flap activity and duplicate payloads |
 | `0x584` | TX | Keepalive / ECU-present frame | High | Core cluster/body keepalive |
-| `0x608` | TX | Extra engine/body state frame | Medium | Relevant at key-on, byte meaning still partial |
+| `0x608` | Disabled TX | Extra engine/body state frame | Medium | Quarantined during ECU-only CAN testing |
 | `0x0EF50000` | RX | Unknown extended frame | Low | Seen during logging, not yet assigned |
 
 ## Current uaEFI usage
@@ -41,13 +41,7 @@ engineering.
 - `0x212`
 - `0x308`
 - `0x312`
-- `0x408`
-- `0x412`
-- `0x416`
-- `0x423`
-- `0x443`
 - `0x584`
-- `0x608`
 
 ### Received by uaEFI
 
@@ -55,6 +49,20 @@ engineering.
 - `0x300`
 - `0x412`
 - `0x443`
+
+### Temporarily not transmitted by uaEFI
+
+These frames have OEM-looking payload references below, but are disabled while
+debugging chime, door-lamp, HVAC flap and TunerStudio CRC errors. Logs showed
+multiple payloads for the same IDs, which strongly suggests another module is
+already talking on these IDs.
+
+- `0x408`
+- `0x412`
+- `0x416`
+- `0x423`
+- `0x443`
+- `0x608`
 
 ## Practical notes
 
@@ -102,3 +110,4 @@ fully understood.
   - climbs into the high `0x8x` range at warm idle
 - `0x408` and `0x412` shift from `FF`-heavy payloads into more structured `0E...` and `56...` payloads once the OEM ECU is truly alive at `KEY ON`.
 - `0x443` should stay close to `00 02 00 00 00 00` while debugging body/HVAC behavior. Non-stock values such as `00 00 ...` and `00 03 ...` have been observed together with recirculation flap activity.
+- Current test strategy is ECU-only TX first, then re-enable quarantined IDs one at a time only if a specific missing function proves they are required from the ECU.
