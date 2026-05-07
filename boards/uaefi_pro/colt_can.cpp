@@ -126,12 +126,12 @@ static void sendFrame308() {
 	if (isEngineRunning()) {
 		msg[3] = 0x00;
 		msg[4] = 0x00;
-		msg[5] = 0x52;
+		msg[5] = 0x53;
 		msg[6] = 0xFF;
 	} else {
 		msg[0] = 0x00;
-		msg[3] = 0x06;
-		msg[4] = 0x01;
+		msg[3] = 0x04;
+		msg[4] = 0x00;
 		msg[5] = 0x33;
 	}
 	msg[6] = 0xFF;
@@ -168,7 +168,7 @@ static void sendFrame408() {
 	if (isEngineRunning()) {
 		msg[0] = 0x0E;
 		msg[1] = 0x00;
-		msg[2] = 0x64;
+		msg[2] = 0x65;
 		msg[3] = 0x64;
 		msg[4] = 0xFE;
 		msg[5] = 0xC3;
@@ -177,13 +177,13 @@ static void sendFrame408() {
 		return;
 	}
 
-	msg[0] = 0xFF;
+	msg[0] = 0x0F;
 	msg[1] = 0x00;
-	msg[2] = 0xFF;
+	msg[2] = 0x63;
 	msg[3] = 0xFF;
 	msg[4] = 0xFE;
-	msg[5] = 0xFF;
-	msg[6] = 0xFF;
+	msg[5] = 0xC3;
+	msg[6] = 0x4F;
 	msg[7] = 0x00;
 }
 
@@ -195,18 +195,18 @@ static void sendFrame412() {
 		msg[2] = 0x05;
 		msg[3] = 0xD7;
 		msg[4] = 0x8C;
-		msg[5] = 0x5D;
+		msg[5] = 0x5C;
 		msg[6] = 0x01;
 		msg[7] = 0xFF;
 		return;
 	}
 
-	msg[0] = 0xFF;
-	msg[1] = 0xFF;
+	msg[0] = 0x58;
+	msg[1] = 0x00;
 	msg[2] = 0x05;
 	msg[3] = 0xD7;
 	msg[4] = 0x8C;
-	msg[5] = 0x00;
+	msg[5] = 0x5C;
 	msg[6] = 0x01;
 	msg[7] = 0xFF;
 }
@@ -216,7 +216,7 @@ static void sendFrame416() {
 
 	CanTxMessage msg(CanCategory::NBC, 0x416, 8, COLT_CAN_BUS);
 	if (!isEngineRunning()) {
-		msg[0] = 0x79;
+		msg[0] = 0x75;
 	} else if (rpm < 900) {
 		msg[0] = 0x8D;
 	} else if (rpm < 1100) {
@@ -238,8 +238,8 @@ static void sendFrame416() {
 static void sendFrame423() {
 	CanTxMessage msg(CanCategory::NBC, 0x423, 6, COLT_CAN_BUS);
 	if (!isEngineRunning()) {
-		msg[0] = 0x01;
-		msg[3] = 0x08;
+		msg[0] = 0x03;
+		msg[3] = 0x09;
 	} else {
 		msg[0] = 0x07;
 		msg[3] = 0x09;
@@ -272,13 +272,13 @@ static void sendFrame608() {
 	CanTxMessage msg(CanCategory::NBC, 0x608, 8, COLT_CAN_BUS);
 
 	if (isEngineRunning()) {
-		msg[0] = 0x64;
+		msg[0] = 0x66;
 		msg[1] = 0x00;
 		msg[2] = 0x18;
 		msg[3] = 0xC3;
 		msg[4] = 0xFF;
 		msg[5] = 0x00;
-		msg[6] = 0x6A;
+		msg[6] = 0x65;
 		msg[7] = 0x00;
 		return;
 	}

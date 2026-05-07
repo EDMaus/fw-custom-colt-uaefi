@@ -68,3 +68,36 @@ engineering.
 - OEM `KEY ON` uses noticeably different payloads than older custom uaEFI key-on baselines, especially on `0x408`, `0x412`, `0x416`, `0x423`, `0x308`, and `0x608`.
 - With uaEFI powered by USB only, CAN transmission should stay quiet unless ignition is genuinely on.
 - `0x190` and `0x191` are confirmed as built-in wideband module traffic and should not be mistaken for missing vehicle-network frames.
+
+## OEM payload baselines by state
+
+These are the most useful dominant payloads seen in the OEM captures. They are
+intended as reverse-engineering references, not as a claim that every byte is
+fully understood.
+
+| ID | KEY OFF | KEY ACC | KEY ON | KEY ON / start |
+| --- | --- | --- | --- | --- |
+| `0x408` | `FF 00 FF FF 0C FF FF 00` | `FF 00 FF FF 0D FF FF 00` | `0F 00 63 FF FE C3 4F 00` or `0E 00 63 FF FE C3 4F 00` | `0E 00 65 64 FE C3 4F 00` at warm idle |
+| `0x412` | `FF FF 05 D7 8C 00 01 FF` | `FF FF 05 D7 8C 00 01 FF` | `58 00 05 D7 8C 5C 01 FF` | `58 00 05 D7 8C 5C/5D 01 FF` at warm idle |
+| `0x416` | `7C 00 00 00 00 00 00 00` | `7B 00 00 00 00 00 00 00` | `75 00 00 00 00 00 00 00` | mostly `8D ...`, `8E ...`, `8F ...` at warm idle |
+| `0x423` | `00 00 02 08 2E BC` | `01 00 02 08 2E BC` | `03 00 00 09 2E BC` | `07 00 00 09 2E BC` at warm idle |
+| `0x443` | not dominant in sample | not dominant in sample | `00 02 00 00 00 00` | `00 02 00 00 00 00` |
+| `0x584` | not dominant in sample | `C0` | `C0` | `C0` |
+| `0x608` | not dominant in sample | not dominant in sample | `34 00 18 C3 FF 00 00 00` | common warm-idle values include `66 00 18 C3 FF 00 65 00` and nearby dynamic variants |
+| `0x308` | not dominant in sample | not dominant in sample | `00 00 00 04 00 33 FF 00` | RPM encoded in bytes 1-2, with byte 5 usually `0x53` at warm idle |
+| `0x312` | not dominant in sample | not dominant in sample | `07 6F 07 6F 09 00 07 8E` | mostly `07 6F 07 6F 09 00 07 8E`, with cranking variants |
+| `0x210` | not dominant in sample | not dominant in sample | `00 00 00 00 00 00 00 FF` | `00 00 00 40 00 00 00 FF` and `00 00 00 00 00 00 00 FF` |
+| `0x212` | not dominant in sample | not dominant in sample | `05 66 00 00 68 E9 00 00` | `05 66 00 00 68 E9 00 00` plus several dynamic cranking values |
+
+## Most useful state transitions
+
+- `0x423` is a very strong body-state indicator:
+  - `00` first byte at `KEY OFF`
+  - `01` at `ACC`
+  - `03` at `KEY ON`
+- `0x416` is a very strong ECU-state indicator:
+  - around `0x7C` at `KEY OFF`
+  - around `0x7B` at `ACC`
+  - around `0x75` at `KEY ON`
+  - climbs into the high `0x8x` range at warm idle
+- `0x408` and `0x412` shift from `FF`-heavy payloads into more structured `0E...` and `56...` payloads once the OEM ECU is truly alive at `KEY ON`.
