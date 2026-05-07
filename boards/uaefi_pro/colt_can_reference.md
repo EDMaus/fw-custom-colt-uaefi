@@ -23,13 +23,13 @@ engineering.
 | `0x300` | RX | ASC / traction / stability status | Medium | Used in firmware for ASC intervention state |
 | `0x308` | TX | Cluster engine info with RPM content | High | Tach/RPM-related |
 | `0x312` | TX | Companion cluster / engine frame | Medium | OEM-stable, byte meaning still partial |
-| `0x408` | Disabled TX | Key-state / ECU-state / body-state frame | High | Quarantined because another module appears to send this ID |
-| `0x412` | RX / Disabled TX | Key-state / ECU-state / meter/body frame | High | Quarantined because another module appears to send this ID |
-| `0x416` | Disabled TX | State-indicator frame | High | Quarantined because another module appears to send this ID |
+| `0x408` | TX | Key-state / ECU-state / body-state frame | High | Needed for fan/body temperature behavior |
+| `0x412` | TX/RX | Key-state / ECU-state / meter/body frame | High | Needed for fan/body temperature behavior |
+| `0x416` | TX | State-indicator frame | High | Needed for fan/body temperature behavior |
 | `0x423` | Disabled TX | Body / light / door-state frame | High | Quarantined after door-lamp/chime conflicts |
 | `0x443` | RX / Disabled TX | A/C request / A/C status frame | High | Quarantined after HVAC flap activity and duplicate payloads |
 | `0x584` | TX | Keepalive / ECU-present frame | High | Core cluster/body keepalive |
-| `0x608` | Disabled TX | Extra engine/body state frame | Medium | Quarantined during ECU-only CAN testing |
+| `0x608` | TX | Extra engine/body state frame | Medium | Needed for fan/body temperature behavior |
 | `0x0EF50000` | RX | Unknown extended frame | Low | Seen during logging, not yet assigned |
 
 ## Current uaEFI usage
@@ -41,7 +41,11 @@ engineering.
 - `0x212`
 - `0x308`
 - `0x312`
+- `0x408`
+- `0x412`
+- `0x416`
 - `0x584`
+- `0x608`
 
 ### Received by uaEFI
 
@@ -57,12 +61,8 @@ debugging chime, door-lamp, HVAC flap and TunerStudio CRC errors. Logs showed
 multiple payloads for the same IDs, which strongly suggests another module is
 already talking on these IDs.
 
-- `0x408`
-- `0x412`
-- `0x416`
 - `0x423`
 - `0x443`
-- `0x608`
 
 ## Practical notes
 
