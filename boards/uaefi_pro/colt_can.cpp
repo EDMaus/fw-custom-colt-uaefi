@@ -43,14 +43,6 @@ static bool isIgnitionOn() {
 	return isIgnVoltage();
 }
 
-static bool isAcRequested() {
-	return g_coltCanState.acRequest;
-}
-
-static bool shouldUseOemKeyOnBaseline() {
-	return isIgnitionOn() && !isEngineRunning();
-}
-
 static uint16_t encodeColtDashRpm(float rpm) {
 	if (rpm < 0) {
 		rpm = 0;
@@ -252,11 +244,11 @@ static void sendFrame423() {
 
 static void sendFrame443() {
 	CanTxMessage msg(CanCategory::NBC, 0x443, 6, COLT_CAN_BUS);
-	// Keep key-on/engine-off on the OEM baseline. Letting HVAC request leak onto
-	// 0x443 before the engine is actually running appears to wake up A/C-related
-	// behavior (including fan activity) earlier than stock.
-	msg[0] = (!shouldUseOemKeyOnBaseline() && isAcRequested()) ? 0x01 : 0x00;
-	msg[1] = 0x00;
+	// Keep HVAC/body chatter on the dominant OEM baseline for now. The Colt HVAC
+	// module reacts badly to non-stock 0x443 payloads while we are debugging
+	// chime, door-lamp and recirculation flap behavior.
+	msg[0] = 0x00;
+	msg[1] = 0x02;
 	msg[2] = 0x00;
 	msg[3] = 0x00;
 	msg[4] = 0x00;
@@ -325,16 +317,16 @@ void processColtCanTx(CanCycle cycle) {
 		sendFrame212();
 		sendFrame308();
 		sendFrame312();
-		// 0x443 is part of the HVAC/body conversation. Keep sending the OEM
-		// engine-off baseline so other modules continue to see the frame, but do
-		// not make it dynamic until the engine is actually running.
+		sendFrame423();
+		// 0x443 is part of the HVAC/body conversation. Keep it fixed to the
+		// dominant OEM payload until chime and recirculation flap behavior is
+		// stable.
 		sendFrame443();
 
 		static bool send40msThisTick = false;
 		send40msThisTick = !send40msThisTick;
 
 		if (send40msThisTick) {
-			sendFrame423();
 			sendFrame584();
 		}
 	}

@@ -60,7 +60,7 @@ engineering.
 
 - The most critical IDs for fan / key-on behavior are `0x408`, `0x412`, `0x416`, and `0x608`.
 - The most critical ID for door / lamp behavior is `0x423`.
-- The most critical IDs for A/C behavior are `0x443` and the compressor control output configuration.
+- The most critical IDs for A/C and HVAC flap behavior are `0x443` and the compressor control output configuration.
 - USB / TunerStudio connection can change observed bus behavior because the ECU becomes active and may emit extra internal traffic such as `0x190` and `0x191`.
 
 ## Last known observations
@@ -101,3 +101,4 @@ fully understood.
   - around `0x75` at `KEY ON`
   - climbs into the high `0x8x` range at warm idle
 - `0x408` and `0x412` shift from `FF`-heavy payloads into more structured `0E...` and `56...` payloads once the OEM ECU is truly alive at `KEY ON`.
+- `0x443` should stay close to `00 02 00 00 00 00` while debugging body/HVAC behavior. Non-stock values such as `00 00 ...` and `00 03 ...` have been observed together with recirculation flap activity.
