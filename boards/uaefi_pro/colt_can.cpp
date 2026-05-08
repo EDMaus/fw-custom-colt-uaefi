@@ -19,18 +19,6 @@ struct ColtRuntimeState {
 
 static ColtRuntimeState g_coltCanState;
 
-static uint8_t clampToU8(int value) {
-	if (value < 0) {
-		return 0;
-	}
-
-	if (value > 0xFF) {
-		return 0xFF;
-	}
-
-	return static_cast<uint8_t>(value);
-}
-
 static int getCurrentRpm() {
 	return static_cast<int>(Sensor::getOrZero(SensorType::Rpm));
 }
