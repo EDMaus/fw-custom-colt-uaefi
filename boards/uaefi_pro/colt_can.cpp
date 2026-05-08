@@ -290,10 +290,6 @@ void processColtCanTx(CanCycle cycle) {
 		return;
 	}
 
-	if (cycle.isInterval(CI::_10ms)) {
-		sendFrame0C0();
-	}
-
 	if (cycle.isInterval(CI::_20ms)) {
 		sendFrame210();
 		sendFrame212();
