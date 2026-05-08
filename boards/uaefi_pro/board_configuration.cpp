@@ -183,6 +183,10 @@ static void setupColtEngine() {
 	engineConfiguration->isSdCardEnabled = true;
 	engineConfiguration->enableSoftwareKnock = true;
 
+	engineConfiguration->tpsAccelLookback = 0.3f;
+	engineConfiguration->tpsAccelFractionPeriod = 3;
+	engineConfiguration->tpsAccelFractionDivisor = 1.5f;
+
 	engineConfiguration->trigger.type = trigger_type_e::TT_36_2_1;
 	engineConfiguration->vvtMode[0] = VVT_MITSUBISHI_4G69;
 }
