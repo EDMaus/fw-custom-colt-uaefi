@@ -45,9 +45,9 @@ static uint16_t encodeColtDashRpm(float rpm) {
 	return static_cast<uint16_t>(raw);
 }
 
-static void sendFrame1E1() {
+static void sendFrame1E1(bool initialSelfCheck) {
 	CanTxMessage msg(CanCategory::NBC, 0x1E1, 8, COLT_CAN_BUS);
-	msg[0] = isEngineRunning() ? 0x00 : 0x81;
+	msg[0] = initialSelfCheck ? 0x81 : 0x00;
 	msg[1] = 0x00;
 	msg[2] = 0x00;
 	msg[3] = 0x00;
@@ -262,12 +262,20 @@ bool isColtAcRequested() {
 
 void processColtCanTx(CanCycle cycle) {
 #if !defined(EFI_BOOTLOADER) && EFI_CAN_SUPPORT
+	static uint16_t ignitionOn20msTicks = 0;
+
 	if (!isIgnitionOn()) {
+		ignitionOn20msTicks = 0;
 		return;
 	}
 
 	if (cycle.isInterval(CI::_20ms)) {
-		sendFrame1E1();
+		if (ignitionOn20msTicks < 0xFFFF) {
+			ignitionOn20msTicks++;
+		}
+
+		const bool initialSelfCheck = !isEngineRunning() && ignitionOn20msTicks <= 350;
+		sendFrame1E1(initialSelfCheck);
 		sendFrame210();
 		sendFrame212();
 		sendFrame308();
