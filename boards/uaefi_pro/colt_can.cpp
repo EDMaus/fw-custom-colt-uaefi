@@ -294,7 +294,6 @@ void processColtCanTx(CanCycle cycle) {
 
 	if (cycle.isInterval(CI::_10ms)) {
 		sendFrame0C0();
-		sendFrame423();
 	}
 
 	if (cycle.isInterval(CI::_20ms)) {
@@ -302,6 +301,7 @@ void processColtCanTx(CanCycle cycle) {
 		sendFrame212();
 		sendFrame308();
 		sendFrame312();
+		sendFrame423();
 
 		static bool send40msThisTick = false;
 		send40msThisTick = !send40msThisTick;
