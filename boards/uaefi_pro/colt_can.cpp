@@ -228,15 +228,13 @@ static void sendFrame416() {
 }
 
 static void sendFrame423() {
-	CanTxMessage msg(CanCategory::NBC, 0x423, 8, COLT_CAN_BUS);
+	CanTxMessage msg(CanCategory::NBC, 0x423, 6, COLT_CAN_BUS);
 	msg[0] = isEngineRunning() ? 0x07 : 0x03;
 	msg[1] = 0x00;
 	msg[2] = 0x00;
 	msg[3] = 0x09;
 	msg[4] = 0x2E;
 	msg[5] = 0xBC;
-	msg[6] = 0x00;
-	msg[7] = 0x00;
 }
 
 static void sendFrame584() {
