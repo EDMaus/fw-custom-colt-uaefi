@@ -57,20 +57,6 @@ static uint16_t encodeColtDashRpm(float rpm) {
 	return static_cast<uint16_t>(raw);
 }
 
-static void sendFrame0C0() {
-	const int rpm = getCurrentRpm();
-
-	CanTxMessage msg(CanCategory::NBC, 0x0C0, 8, COLT_CAN_BUS);
-	msg[0] = clampToU8((rpm * 255) / 12000);
-	msg[1] = 0x00;
-	msg[2] = 0x00;
-	msg[3] = 0x00;
-	msg[4] = clampToU8((rpm * 255) / 8000);
-	msg[5] = 0x00;
-	msg[6] = 0x00;
-	msg[7] = 0x00;
-}
-
 static void sendFrame210() {
 	CanTxMessage msg(CanCategory::NBC, 0x210, 8, COLT_CAN_BUS);
 	msg[0] = 0x00;
