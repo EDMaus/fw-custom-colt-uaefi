@@ -73,6 +73,11 @@ static void colt_boardConfigOverrides() {
 	setHellenCan();
 
 	setDefaultHellenAtPullUps();
+
+	// Older test tunes could store zero here, which makes TPS accel setup invalid.
+	if (engineConfiguration->tpsAccelLookback < 0.05f) {
+		engineConfiguration->tpsAccelLookback = 0.3f;
+	}
 }
 
 bool validateBoardConfig() {
