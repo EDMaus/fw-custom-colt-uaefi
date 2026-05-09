@@ -274,7 +274,7 @@ void processColtCanTx(CanCycle cycle) {
 			ignitionOn20msTicks++;
 		}
 
-		const bool initialSelfCheck = !isEngineRunning() && ignitionOn20msTicks <= 350;
+		const bool initialSelfCheck = !isEngineRunning() && ignitionOn20msTicks <= 100;
 		sendFrame1E1(initialSelfCheck);
 		sendFrame210();
 		sendFrame212();
