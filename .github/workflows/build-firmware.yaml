@@ -79,20 +79,20 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: rusefi_update_colt_uaefi_pro.srec
-          path: ext/rusefi/firmware/rusefi.snapshot.colt_uaefi_pro/*_update.srec
+          path: ext/rusefi/firmware/rusefi.snapshot.uaefi_pro/*_update.srec
 
       - name: Upload named Colt bundle
         uses: actions/upload-artifact@v4
         with:
           name: rusefi_bundle_colt_uaefi_pro.zip
-          path: ext/rusefi/artifacts/rusefi_bundle_colt_uaefi_pro.zip
+          path: ext/rusefi/artifacts/rusefi_bundle_uaefi_pro.zip
           if-no-files-found: error
 
       - name: Upload named Colt autoupdate bundle
         uses: actions/upload-artifact@v4
         with:
           name: rusefi_bundle_colt_uaefi_pro_autoupdate.zip
-          path: ext/rusefi/artifacts/rusefi_bundle_colt_uaefi_pro_autoupdate.zip
+          path: ext/rusefi/artifacts/rusefi_bundle_uaefi_pro_autoupdate.zip
           if-no-files-found: warn
 
       - name: Generate firmware file reports
