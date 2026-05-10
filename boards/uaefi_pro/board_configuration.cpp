@@ -71,6 +71,7 @@ static void colt_boardConfigOverrides() {
 	engineConfiguration->vrThreshold[0].pin = Gpio::MM100_OUT_PWM6;
 
 	setHellenCan();
+	setHellenCan2();
 
 	setDefaultHellenAtPullUps();
 
@@ -78,14 +79,6 @@ static void colt_boardConfigOverrides() {
 	if (engineConfiguration->tpsAccelLookback < 0.05f) {
 		engineConfiguration->tpsAccelLookback = 0.3f;
 	}
-}
-
-static bool colt_validateBoardConfig() {
-	if (engineConfiguration->can2RxPin != Gpio::B12) {
-		setHellenCan2();
-	}
-
-	return true;
 }
 
 void setUaefiDefaultETBPins() {
@@ -305,7 +298,6 @@ expected<float> boardOverrideGppwm(size_t index) {
 void setup_custom_board_overrides() {
 	custom_board_DefaultConfiguration = colt_boardDefaultConfiguration;
 	custom_board_ConfigOverrides = colt_boardConfigOverrides;
-	custom_board_validateConfig = colt_validateBoardConfig;
 	custom_board_periodicSlowCallback = colt_slowCallback;
 	custom_board_periodicFastCallback = colt_fastCallback;
 }
