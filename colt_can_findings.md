@@ -14,10 +14,12 @@ This file tracks the tested CAN states so we do not have to rediscover the same 
   - `00 00 00 04 01 33 FF 00`
   - `00 00 00 04 00 33 FF 00`
 - Matching the `0x308` settle phase removed the repeated beep in the 2026-05-12 test, but SRS still starts blinking after the key-on self-check window.
+- In the later "beep returned" test with the same firmware, the main difference from the prior no-beep test was `0x412` switching to/holding `34 00 05 D7 8C 4A 11 FF` after start. The no-beep test mostly stayed around `34 00 05 D7 8C 4A 01 FF`.
 - `0x1E1` is present from another module as `81 00 00 00 00 00 00 00` while the firmware has also transmitted `00 00 00 00 00 00 00 00`.
 - Making firmware `0x1E1` pre-run `81 ...` made behavior worse and brought more beeps/ASC issues. Keep firmware `0x1E1` clear (`00 ...`) unless a new log proves otherwise.
 - `0x423` is not transmitted by current firmware. It is present from another module as `03 00 00 08 2E BC` during key-on/running in rusEFI tests.
 - `0x443` is not transmitted by current firmware. It is present as `00 02 00 00 00 00`.
+- A narrow isolation build after `701f20ea` transmits only OEM-like `0x412 = 58 00 05 D7 8C 5C 01 FF` at 100 ms. This is intended to isolate SRS/beep without reintroducing broad body-frame replay.
 
 ## Commit behavior notes
 
