@@ -9,7 +9,8 @@
 namespace {
 
 static constexpr size_t COLT_CAN_BUS = 0;
-static constexpr uint32_t COLT_MIL_BULB_CHECK_20MS_TICKS = 250; // 5 seconds
+static constexpr uint32_t COLT_MIL_BULB_CHECK_20MS_TICKS = 200; // 4 seconds
+static constexpr uint32_t COLT_MIL_SELF_CHECK_SETTLE_20MS_TICKS = 250; // 5 seconds total
 
 struct ColtRuntimeState {
 	bool brakePressed = false;
@@ -110,8 +111,13 @@ static void sendFrame308() {
 		msg[6] = 0xFF;
 	} else {
 		msg[0] = 0x00;
-		msg[3] = (g_ignitionOn20msTicks <= COLT_MIL_BULB_CHECK_20MS_TICKS) ? 0x06 : 0x04;
-		msg[4] = (g_ignitionOn20msTicks <= COLT_MIL_BULB_CHECK_20MS_TICKS) ? 0x01 : 0x00;
+		if (g_ignitionOn20msTicks <= COLT_MIL_BULB_CHECK_20MS_TICKS) {
+			msg[3] = 0x06;
+			msg[4] = 0x01;
+		} else {
+			msg[3] = 0x04;
+			msg[4] = (g_ignitionOn20msTicks <= COLT_MIL_SELF_CHECK_SETTLE_20MS_TICKS) ? 0x01 : 0x00;
+		}
 		msg[5] = 0x33;
 	}
 	msg[6] = 0xFF;
