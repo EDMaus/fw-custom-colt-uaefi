@@ -51,7 +51,7 @@ static uint16_t encodeColtDashRpm(float rpm) {
 
 static void sendFrame1E1() {
 	CanTxMessage msg(CanCategory::NBC, 0x1E1, 8, COLT_CAN_BUS);
-	msg[0] = 0x00;
+	msg[0] = isEngineRunning() ? 0x00 : 0x81;
 	msg[1] = 0x00;
 	msg[2] = 0x00;
 	msg[3] = 0x00;
