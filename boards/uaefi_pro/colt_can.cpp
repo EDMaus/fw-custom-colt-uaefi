@@ -9,7 +9,7 @@
 namespace {
 
 static constexpr size_t COLT_CAN_BUS = 0;
-static constexpr uint32_t COLT_ASC_SELF_CHECK_20MS_TICKS = 750; // 15 seconds
+static constexpr uint32_t COLT_ASC_SELF_CHECK_20MS_TICKS = 250; // 5 seconds
 static constexpr uint32_t COLT_MIL_BULB_CHECK_20MS_TICKS = 250; // 5 seconds
 
 struct ColtRuntimeState {
@@ -97,7 +97,7 @@ static void sendFrame212() {
 	msg[2] = 0x00;
 	msg[3] = 0x00;
 	msg[4] = 0x68;
-	msg[5] = 0xE9;
+	msg[5] = 0xEC;
 	msg[6] = 0x00;
 	msg[7] = 0x00;
 }
