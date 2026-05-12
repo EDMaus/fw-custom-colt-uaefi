@@ -75,11 +75,11 @@ static void sendFrame212() {
 	CanTxMessage msg(CanCategory::NBC, 0x212, 8, COLT_CAN_BUS);
 	if (isEngineRunning()) {
 		msg[0] = 0x03;
-		msg[1] = 0xA1;
+		msg[1] = 0x92;
 		msg[2] = 0x00;
 		msg[3] = 0x00;
 		msg[4] = 0x68;
-		msg[5] = 0x12;
+		msg[5] = 0x0F;
 		msg[6] = 0x00;
 		msg[7] = 0x00;
 		return;
@@ -90,7 +90,7 @@ static void sendFrame212() {
 	msg[2] = 0x00;
 	msg[3] = 0x00;
 	msg[4] = 0x68;
-	msg[5] = 0xEC;
+	msg[5] = 0xE9;
 	msg[6] = 0x00;
 	msg[7] = 0x00;
 }
@@ -111,7 +111,7 @@ static void sendFrame308() {
 	} else {
 		msg[0] = 0x00;
 		msg[3] = (g_ignitionOn20msTicks <= COLT_MIL_BULB_CHECK_20MS_TICKS) ? 0x06 : 0x04;
-		msg[4] = 0x00;
+		msg[4] = (g_ignitionOn20msTicks <= COLT_MIL_BULB_CHECK_20MS_TICKS) ? 0x01 : 0x00;
 		msg[5] = 0x33;
 	}
 	msg[6] = 0xFF;
