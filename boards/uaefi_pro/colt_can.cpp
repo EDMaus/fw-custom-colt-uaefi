@@ -9,7 +9,6 @@
 namespace {
 
 static constexpr size_t COLT_CAN_BUS = 0;
-static constexpr uint32_t COLT_ASC_SELF_CHECK_20MS_TICKS = 250; // 5 seconds
 static constexpr uint32_t COLT_MIL_BULB_CHECK_20MS_TICKS = 250; // 5 seconds
 
 struct ColtRuntimeState {
@@ -20,7 +19,6 @@ struct ColtRuntimeState {
 };
 
 static ColtRuntimeState g_coltCanState;
-static uint32_t g_engineRunning20msTicks = 0;
 static uint32_t g_ignitionOn20msTicks = 0;
 
 static int getCurrentRpm() {
@@ -51,7 +49,7 @@ static uint16_t encodeColtDashRpm(float rpm) {
 
 static void sendFrame1E1() {
 	CanTxMessage msg(CanCategory::NBC, 0x1E1, 8, COLT_CAN_BUS);
-	msg[0] = isEngineRunning() ? 0x00 : 0x81;
+	msg[0] = 0x00;
 	msg[1] = 0x00;
 	msg[2] = 0x00;
 	msg[3] = 0x00;
@@ -77,16 +75,11 @@ static void sendFrame212() {
 	CanTxMessage msg(CanCategory::NBC, 0x212, 8, COLT_CAN_BUS);
 	if (isEngineRunning()) {
 		msg[0] = 0x03;
-		if (g_engineRunning20msTicks <= COLT_ASC_SELF_CHECK_20MS_TICKS) {
-			msg[1] = 0x92;
-			msg[5] = 0x0F;
-		} else {
-			msg[1] = 0xA1;
-			msg[5] = 0x12;
-		}
+		msg[1] = 0xA1;
 		msg[2] = 0x00;
 		msg[3] = 0x00;
 		msg[4] = 0x68;
+		msg[5] = 0x12;
 		msg[6] = 0x00;
 		msg[7] = 0x00;
 		return;
@@ -181,7 +174,6 @@ static void sendFrame608() {
 void initColtCan() {
 #if !defined(EFI_BOOTLOADER) && EFI_CAN_SUPPORT
 	g_coltCanState = {};
-	g_engineRunning20msTicks = 0;
 	g_ignitionOn20msTicks = 0;
 #endif
 }
@@ -197,19 +189,12 @@ bool isColtAcRequested() {
 void processColtCanTx(CanCycle cycle) {
 #if !defined(EFI_BOOTLOADER) && EFI_CAN_SUPPORT
 	if (!isIgnitionOn()) {
-		g_engineRunning20msTicks = 0;
 		g_ignitionOn20msTicks = 0;
 		return;
 	}
 
 	if (cycle.isInterval(CI::_20ms)) {
 		g_ignitionOn20msTicks++;
-
-		if (isEngineRunning()) {
-			g_engineRunning20msTicks++;
-		} else {
-			g_engineRunning20msTicks = 0;
-		}
 
 		sendFrame1E1();
 		sendFrame210();
