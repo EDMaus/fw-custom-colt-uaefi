@@ -19,7 +19,7 @@ This file tracks the tested CAN states so we do not have to rediscover the same 
 - Making firmware `0x1E1` pre-run `81 ...` made behavior worse and brought more beeps/ASC issues. Keep firmware `0x1E1` clear (`00 ...`) unless a new log proves otherwise.
 - `0x423` is not transmitted by current firmware. It is present from another module as `03 00 00 08 2E BC` during key-on/running in rusEFI tests.
 - `0x443` is not transmitted by current firmware. It is present as `00 02 00 00 00 00`.
-- A narrow isolation build after `701f20ea` transmits only OEM-like `0x412 = 58 00 05 D7 8C 5C 01 FF` at 100 ms. This is intended to isolate SRS/beep without reintroducing broad body-frame replay.
+- A narrow isolation build after `701f20ea` transmitted only OEM-like `0x412 = 58 00 05 D7 8C 5C 01 FF` at 100 ms. Test result: SRS/beep stayed the same, ASC went out earlier. `0x412` alone is not the SRS/beep fix.
 
 ## Commit behavior notes
 
