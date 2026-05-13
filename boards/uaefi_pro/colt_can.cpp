@@ -87,11 +87,11 @@ static void sendFrame212() {
 	}
 
 	msg[0] = 0x05;
-	msg[1] = 0x37;
+	msg[1] = 0x66;
 	msg[2] = 0x00;
 	msg[3] = 0x00;
 	msg[4] = 0x68;
-	msg[5] = 0xDA;
+	msg[5] = 0xE9;
 	msg[6] = 0x00;
 	msg[7] = 0x00;
 }

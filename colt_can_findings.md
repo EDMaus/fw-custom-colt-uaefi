@@ -53,10 +53,15 @@ This file tracks the tested CAN states so we do not have to rediscover the same 
   - Sends `0x1E1 = 81 ...` for 6.7 seconds after key-on, then clears to `00 ...`, matching the clean stock SRS self-check timing before start.
   - Test result: not fixed. SRS stayed on, then blinked when it should go out, and beep returned after start.
 
-- Current key-on `0x212` test
+- `5bfca49d Match Colt key-on 0x212 self-check state`
   - Reverts firmware `0x1E1` to clear (`00 ...`) because the timed `0x1E1` test failed.
   - Keeps ASC-good running `0x212 = 03 92 00 00 68 0F 00 00`.
   - Changes key-on `0x212` to clean-stock `05 37 00 00 68 DA 00 00`.
+
+- Current proven-combination test
+  - Keeps proven SRS/beep fix: `0x1E1 = 00 00 00 00 00 00 00 00`.
+  - Restores ASC-good `0x212` pair from `26fd3233`: key-on `05 66 00 00 68 E9 00 00`, running `03 92 00 00 68 0F 00 00`.
+  - This isolates whether the old SRS-positive `0x1E1` clear state and later ASC-positive `0x212` state can coexist without reintroducing the key-on `0x212` stock experiment.
 
 ## Current open problem
 
