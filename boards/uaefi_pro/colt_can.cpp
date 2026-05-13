@@ -203,6 +203,15 @@ void processColtCanTx(CanCycle cycle) {
 		return;
 	}
 
+	if (cycle.isInterval(CI::_10ms)) {
+		// Send 0x1E1 faster than most body traffic so the cluster sees a stable
+		// post-self-check clear state instead of falling back to 0x81.
+		const bool inKeyOnSelfCheck =
+			!isEngineRunning() &&
+			g_ignitionOn20msTicks <= COLT_1E1_SELF_CHECK_20MS_TICKS;
+		sendFrame1E1(inKeyOnSelfCheck ? 0x81 : 0x00);
+	}
+
 	if (cycle.isInterval(CI::_20ms)) {
 		g_ignitionOn20msTicks++;
 		if (isEngineRunning()) {
@@ -210,11 +219,6 @@ void processColtCanTx(CanCycle cycle) {
 		} else {
 			g_engineRunning20msTicks = 0;
 		}
-
-		const bool inKeyOnSelfCheck =
-			!isEngineRunning() &&
-			g_ignitionOn20msTicks <= COLT_1E1_SELF_CHECK_20MS_TICKS;
-		sendFrame1E1(inKeyOnSelfCheck ? 0x81 : 0x00);
 		sendFrame210();
 		sendFrame212();
 		sendFrame308();
