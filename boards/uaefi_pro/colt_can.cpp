@@ -11,6 +11,9 @@ namespace {
 static constexpr size_t COLT_CAN_BUS = 0;
 static constexpr uint32_t COLT_MIL_BULB_CHECK_20MS_TICKS = 200; // 4 seconds
 static constexpr uint32_t COLT_MIL_SELF_CHECK_SETTLE_20MS_TICKS = 250; // 5 seconds total
+static constexpr uint32_t COLT_1E1_KEY_ON_CLEAR_START_20MS = 350; // 7.0s
+static constexpr uint32_t COLT_1E1_KEY_ON_CLEAR_END_20MS = 450;   // 9.0s
+static constexpr uint32_t COLT_1E1_POST_START_CLEAR_20MS = 50;    // 1.0s
 
 struct ColtRuntimeState {
 	bool brakePressed = false;
@@ -210,9 +213,17 @@ void processColtCanTx(CanCycle cycle) {
 			g_engineRunning20msTicks = 0;
 		}
 
-		// Avoid a continuous 0x1E1 tug-of-war on key-on, but still provide
-		// a short running clear pulse to release SRS/beep latch after start.
-		if (g_engineRunning20msTicks > 0 && g_engineRunning20msTicks <= 50) {
+		// Avoid continuous 0x1E1 conflict, but provide short clear windows:
+		// 1) around key-on self-check completion, 2) right after engine start.
+		const bool keyOnClearWindow =
+			!isEngineRunning() &&
+			g_ignitionOn20msTicks >= COLT_1E1_KEY_ON_CLEAR_START_20MS &&
+			g_ignitionOn20msTicks <= COLT_1E1_KEY_ON_CLEAR_END_20MS;
+		const bool postStartClearWindow =
+			g_engineRunning20msTicks > 0 &&
+			g_engineRunning20msTicks <= COLT_1E1_POST_START_CLEAR_20MS;
+
+		if (keyOnClearWindow || postStartClearWindow) {
 			sendFrame1E1();
 		}
 		sendFrame210();
