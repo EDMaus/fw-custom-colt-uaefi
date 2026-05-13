@@ -48,6 +48,18 @@ static uint16_t encodeColtDashRpm(float rpm) {
 	return static_cast<uint16_t>(raw);
 }
 
+static void sendFrame1E1() {
+	CanTxMessage msg(CanCategory::NBC, 0x1E1, 8, COLT_CAN_BUS);
+	msg[0] = 0x00;
+	msg[1] = 0x00;
+	msg[2] = 0x00;
+	msg[3] = 0x00;
+	msg[4] = 0x00;
+	msg[5] = 0x00;
+	msg[6] = 0x00;
+	msg[7] = 0x00;
+}
+
 static void sendFrame210() {
 	CanTxMessage msg(CanCategory::NBC, 0x210, 8, COLT_CAN_BUS);
 	msg[0] = 0x00;
@@ -137,18 +149,6 @@ static void sendFrame312() {
 	msg[7] = 0x8E;
 }
 
-static void sendFrame443() {
-	CanTxMessage msg(CanCategory::NBC, 0x443, 8, COLT_CAN_BUS);
-	msg[0] = 0x00;
-	msg[1] = 0x02;
-	msg[2] = 0x00;
-	msg[3] = 0x00;
-	msg[4] = 0x00;
-	msg[5] = 0x00;
-	msg[6] = 0x00;
-	msg[7] = 0x00;
-}
-
 static void sendFrame608() {
 	CanTxMessage msg(CanCategory::NBC, 0x608, 8, COLT_CAN_BUS);
 
@@ -201,11 +201,11 @@ void processColtCanTx(CanCycle cycle) {
 
 	if (cycle.isInterval(CI::_20ms)) {
 		g_ignitionOn20msTicks++;
+		sendFrame1E1();
 		sendFrame210();
 		sendFrame212();
 		sendFrame308();
 		sendFrame312();
-		sendFrame443();
 
 	}
 
