@@ -21,6 +21,7 @@ struct ColtRuntimeState {
 
 static ColtRuntimeState g_coltCanState;
 static uint32_t g_ignitionOn20msTicks = 0;
+static uint32_t g_engineRunning20msTicks = 0;
 
 static int getCurrentRpm() {
 	return static_cast<int>(Sensor::getOrZero(SensorType::Rpm));
@@ -181,6 +182,7 @@ void initColtCan() {
 #if !defined(EFI_BOOTLOADER) && EFI_CAN_SUPPORT
 	g_coltCanState = {};
 	g_ignitionOn20msTicks = 0;
+	g_engineRunning20msTicks = 0;
 #endif
 }
 
@@ -196,12 +198,23 @@ void processColtCanTx(CanCycle cycle) {
 #if !defined(EFI_BOOTLOADER) && EFI_CAN_SUPPORT
 	if (!isIgnitionOn()) {
 		g_ignitionOn20msTicks = 0;
+		g_engineRunning20msTicks = 0;
 		return;
 	}
 
 	if (cycle.isInterval(CI::_20ms)) {
 		g_ignitionOn20msTicks++;
-		sendFrame1E1();
+		if (isEngineRunning()) {
+			g_engineRunning20msTicks++;
+		} else {
+			g_engineRunning20msTicks = 0;
+		}
+
+		// Avoid a continuous 0x1E1 tug-of-war on key-on, but still provide
+		// a short running clear pulse to release SRS/beep latch after start.
+		if (g_engineRunning20msTicks > 0 && g_engineRunning20msTicks <= 50) {
+			sendFrame1E1();
+		}
 		sendFrame210();
 		sendFrame212();
 		sendFrame308();
