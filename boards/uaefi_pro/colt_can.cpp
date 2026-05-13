@@ -11,7 +11,7 @@ namespace {
 static constexpr size_t COLT_CAN_BUS = 0;
 static constexpr uint32_t COLT_MIL_BULB_CHECK_20MS_TICKS = 200; // 4 seconds
 static constexpr uint32_t COLT_MIL_SELF_CHECK_SETTLE_20MS_TICKS = 250; // 5 seconds total
-static constexpr uint32_t COLT_1E1_SELF_CHECK_20MS_TICKS = 400;   // 8.0s
+static constexpr uint32_t COLT_1E1_SELF_CHECK_20MS_TICKS = 350;   // 7.0s
 
 struct ColtRuntimeState {
 	bool brakePressed = false;
