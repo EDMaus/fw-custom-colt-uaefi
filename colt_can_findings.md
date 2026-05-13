@@ -73,6 +73,13 @@ This file tracks the tested CAN states so we do not have to rediscover the same 
   - Keep ASC-good running `0x212 = 03 92 00 00 68 0F 00 00`.
   - Change only key-on `0x212` byte5 from `E9` to `EC` (`05 66 00 00 68 EC 00 00`) to isolate whether SRS self-check depends on this key-on state while preserving ASC.
 
+- Current two-phase `0x212` test
+  - Keep `0x1E1 = 00...`.
+  - Keep key-on `0x212 = 05 66 00 00 68 EC 00 00`.
+  - During first 8 seconds after engine start, transmit SRS-friendly running `0x212 = 03 A1 00 00 68 12 00 00`.
+  - After 8 seconds running, hand off to ASC-friendly running `0x212 = 03 92 00 00 68 0F 00 00`.
+  - Goal: satisfy SRS start-phase check without giving up steady-state ASC behavior.
+
 ## Current open problem
 
 ASC and repeated beeps are improved with the current firmware, but SRS still blinks after the key-on self-check window and keeps blinking after start.
