@@ -66,9 +66,12 @@ This file tracks the tested CAN states so we do not have to rediscover the same 
 - `ACCkeyONstartidlebeepsrs.csv` finding
   - Even with firmware `0x1E1 = 00...`, bus still carries continuous `0x1E1 = 81...` from another transmitter, causing mixed `0x1E1` status on the bus.
   - This correlates with SRS staying solid then blinking and beep returning.
-  - Next targeted test restores the auxiliary status frames from the earlier SRS-positive baseline while keeping `0x1E1` clear and ASC-good `0x212`:
-    - Re-enable firmware TX for `0x408`, `0x412`, `0x416`, and `0x584`.
-    - Keep `0x423` and `0x443` not transmitted by firmware.
+  - Re-enabling firmware TX for `0x408`/`0x412`/`0x416`/`0x584` caused clear duplicate payload conflicts in logs (alternating values from two transmitters on the same IDs), so this was reverted.
+
+- Current isolation test
+  - Keep `0x1E1 = 00...` (proven SRS direction).
+  - Keep ASC-good running `0x212 = 03 92 00 00 68 0F 00 00`.
+  - Change only key-on `0x212` byte5 from `E9` to `EC` (`05 66 00 00 68 EC 00 00`) to isolate whether SRS self-check depends on this key-on state while preserving ASC.
 
 ## Current open problem
 
