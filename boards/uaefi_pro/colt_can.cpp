@@ -77,23 +77,23 @@ static void sendFrame210() {
 static void sendFrame212() {
 	CanTxMessage msg(CanCategory::NBC, 0x212, 8, COLT_CAN_BUS);
 	if (isEngineRunning()) {
-		msg[0] = 0x03;
-		msg[1] = 0x92;
+		msg[0] = 0x05;
+		msg[1] = 0x37;
 		msg[2] = 0x00;
 		msg[3] = 0x00;
 		msg[4] = 0x68;
-		msg[5] = 0x0F;
+		msg[5] = 0x3A;
 		msg[6] = 0x00;
 		msg[7] = 0x00;
 		return;
 	}
 
 	msg[0] = 0x05;
-	msg[1] = 0x66;
+	msg[1] = 0x37;
 	msg[2] = 0x00;
 	msg[3] = 0x00;
 	msg[4] = 0x68;
-	msg[5] = 0xE9;
+	msg[5] = 0xDA;
 	msg[6] = 0x00;
 	msg[7] = 0x00;
 }
@@ -149,6 +149,18 @@ static void sendFrame312() {
 	msg[5] = 0x00;
 	msg[6] = 0x07;
 	msg[7] = 0x8E;
+}
+
+static void sendFrame443() {
+	CanTxMessage msg(CanCategory::NBC, 0x443, 8, COLT_CAN_BUS);
+	msg[0] = 0x00;
+	msg[1] = 0x11;
+	msg[2] = 0x00;
+	msg[3] = 0x00;
+	msg[4] = 0x00;
+	msg[5] = 0x00;
+	msg[6] = 0x00;
+	msg[7] = 0x00;
 }
 
 static void sendFrame608() {
@@ -223,6 +235,7 @@ void processColtCanTx(CanCycle cycle) {
 		sendFrame212();
 		sendFrame308();
 		sendFrame312();
+		sendFrame443();
 
 	}
 
