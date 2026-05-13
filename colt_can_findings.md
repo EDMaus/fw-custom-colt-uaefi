@@ -18,6 +18,8 @@ This file tracks the tested CAN states so we do not have to rediscover the same 
 - `0x1E1` is present from another module as `81 00 00 00 00 00 00 00` while the firmware has also transmitted `00 00 00 00 00 00 00 00`.
 - Making firmware `0x1E1` pre-run `81 ...` until engine start made behavior worse and brought more beeps/ASC issues.
 - Clean stock log `Auto_Joris_KEYtoacc5sec_keytoON10sec_start_idle morethanminute.csv` shows the correct SRS self-check shape is timed, not running-dependent: `0x1E1 = 81 00 00 00 00 00 00 00` for about 6.7 seconds after key-on, then `00 00 00 00 00 00 00 00` before engine start.
+- A firmware test matching this timed `0x1E1` self-check did not fix SRS: airbag stayed on, then started blinking where it should have gone out. Do not keep this as the base.
+- Full stream comparison against the clean stock log shows the earliest ECU-frame mismatch at key-on is `0x212`: stock uses `05 37 00 00 68 DA 00 00`, while prior firmware used `05 66 00 00 68 E9 00 00`.
 - `0x423` is not transmitted by current firmware. It is present from another module as `03 00 00 08 2E BC` during key-on/running in rusEFI tests.
 - `0x443` is not transmitted by current firmware. It is present as `00 02 00 00 00 00`.
 - A narrow isolation build after `701f20ea` transmitted only OEM-like `0x412 = 58 00 05 D7 8C 5C 01 FF` at 100 ms. Test result: SRS/beep stayed the same, ASC went out earlier. `0x412` alone is not the SRS/beep fix.
@@ -46,9 +48,15 @@ This file tracks the tested CAN states so we do not have to rediscover the same 
   - Returns to no firmware `0x412` transmit.
   - Test evidence showed isolated `0x412` did not fix SRS/beep.
 
-- Current SRS timing test
+- `9d6e7472 Match Colt 0x1E1 SRS self-check timing`
   - Keeps ASC-good `0x212`.
   - Sends `0x1E1 = 81 ...` for 6.7 seconds after key-on, then clears to `00 ...`, matching the clean stock SRS self-check timing before start.
+  - Test result: not fixed. SRS stayed on, then blinked when it should go out, and beep returned after start.
+
+- Current key-on `0x212` test
+  - Reverts firmware `0x1E1` to clear (`00 ...`) because the timed `0x1E1` test failed.
+  - Keeps ASC-good running `0x212 = 03 92 00 00 68 0F 00 00`.
+  - Changes key-on `0x212` to clean-stock `05 37 00 00 68 DA 00 00`.
 
 ## Current open problem
 
