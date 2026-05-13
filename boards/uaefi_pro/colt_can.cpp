@@ -11,7 +11,6 @@ namespace {
 static constexpr size_t COLT_CAN_BUS = 0;
 static constexpr uint32_t COLT_MIL_BULB_CHECK_20MS_TICKS = 200; // 4 seconds
 static constexpr uint32_t COLT_MIL_SELF_CHECK_SETTLE_20MS_TICKS = 250; // 5 seconds total
-static constexpr uint32_t COLT_212_SRS_PHASE_20MS_TICKS = 400; // 8 seconds after engine starts
 
 struct ColtRuntimeState {
 	bool brakePressed = false;
@@ -22,7 +21,6 @@ struct ColtRuntimeState {
 
 static ColtRuntimeState g_coltCanState;
 static uint32_t g_ignitionOn20msTicks = 0;
-static uint32_t g_engineRunning20msTicks = 0;
 
 static int getCurrentRpm() {
 	return static_cast<int>(Sensor::getOrZero(SensorType::Rpm));
@@ -78,11 +76,11 @@ static void sendFrame212() {
 	CanTxMessage msg(CanCategory::NBC, 0x212, 8, COLT_CAN_BUS);
 	if (isEngineRunning()) {
 		msg[0] = 0x03;
-		msg[1] = (g_engineRunning20msTicks <= COLT_212_SRS_PHASE_20MS_TICKS) ? 0xA1 : 0x92;
+		msg[1] = 0xA1;
 		msg[2] = 0x00;
 		msg[3] = 0x00;
 		msg[4] = 0x68;
-		msg[5] = (g_engineRunning20msTicks <= COLT_212_SRS_PHASE_20MS_TICKS) ? 0x12 : 0x0F;
+		msg[5] = 0x12;
 		msg[6] = 0x00;
 		msg[7] = 0x00;
 		return;
@@ -183,7 +181,6 @@ void initColtCan() {
 #if !defined(EFI_BOOTLOADER) && EFI_CAN_SUPPORT
 	g_coltCanState = {};
 	g_ignitionOn20msTicks = 0;
-	g_engineRunning20msTicks = 0;
 #endif
 }
 
@@ -199,18 +196,11 @@ void processColtCanTx(CanCycle cycle) {
 #if !defined(EFI_BOOTLOADER) && EFI_CAN_SUPPORT
 	if (!isIgnitionOn()) {
 		g_ignitionOn20msTicks = 0;
-		g_engineRunning20msTicks = 0;
 		return;
 	}
 
 	if (cycle.isInterval(CI::_20ms)) {
 		g_ignitionOn20msTicks++;
-		if (isEngineRunning()) {
-			g_engineRunning20msTicks++;
-		} else {
-			g_engineRunning20msTicks = 0;
-		}
-
 		sendFrame1E1();
 		sendFrame210();
 		sendFrame212();
