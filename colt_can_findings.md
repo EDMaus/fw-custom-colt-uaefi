@@ -16,10 +16,12 @@ This file tracks the tested CAN states so we do not have to rediscover the same 
 - Matching the `0x308` settle phase removed the repeated beep in the 2026-05-12 test, but SRS still starts blinking after the key-on self-check window.
 - In the later "beep returned" test with the same firmware, the main difference from the prior no-beep test was `0x412` switching to/holding `34 00 05 D7 8C 4A 11 FF` after start. The no-beep test mostly stayed around `34 00 05 D7 8C 4A 01 FF`.
 - `0x1E1` is present from another module as `81 00 00 00 00 00 00 00` while the firmware has also transmitted `00 00 00 00 00 00 00 00`.
-- Making firmware `0x1E1` pre-run `81 ...` made behavior worse and brought more beeps/ASC issues. Keep firmware `0x1E1` clear (`00 ...`) unless a new log proves otherwise.
+- Making firmware `0x1E1` pre-run `81 ...` until engine start made behavior worse and brought more beeps/ASC issues.
+- Clean stock log `Auto_Joris_KEYtoacc5sec_keytoON10sec_start_idle morethanminute.csv` shows the correct SRS self-check shape is timed, not running-dependent: `0x1E1 = 81 00 00 00 00 00 00 00` for about 6.7 seconds after key-on, then `00 00 00 00 00 00 00 00` before engine start.
 - `0x423` is not transmitted by current firmware. It is present from another module as `03 00 00 08 2E BC` during key-on/running in rusEFI tests.
 - `0x443` is not transmitted by current firmware. It is present as `00 02 00 00 00 00`.
 - A narrow isolation build after `701f20ea` transmitted only OEM-like `0x412 = 58 00 05 D7 8C 5C 01 FF` at 100 ms. Test result: SRS/beep stayed the same, ASC went out earlier. `0x412` alone is not the SRS/beep fix.
+- The clean stock CZT uses very different `0x408`/`0x412`/`0x416` payload families from earlier logs, so those frames are likely body/option/checksum dependent and should not be blindly replayed.
 
 ## Commit behavior notes
 
@@ -40,11 +42,19 @@ This file tracks the tested CAN states so we do not have to rediscover the same 
   - Adds stock-like `0x308` key-on settle phase.
   - Test result: ASC out, repeated beep gone, SRS still solid for about 5 seconds then blinking.
 
+- `cc22bb52 Revert isolated Colt 0x412 test`
+  - Returns to no firmware `0x412` transmit.
+  - Test evidence showed isolated `0x412` did not fix SRS/beep.
+
+- Current SRS timing test
+  - Keeps ASC-good `0x212`.
+  - Sends `0x1E1 = 81 ...` for 6.7 seconds after key-on, then clears to `00 ...`, matching the clean stock SRS self-check timing before start.
+
 ## Current open problem
 
 ASC and repeated beeps are improved with the current firmware, but SRS still blinks after the key-on self-check window and keeps blinking after start.
 
-Next suspects should be key-on frames that change during the same window, not running-only frames:
+Next test should validate whether matching the timed `0x1E1` self-check state lets SRS finish before start. If not, next suspects should be key-on frames that change during the same window, not running-only frames:
 
 - `0x408`
 - `0x412`
