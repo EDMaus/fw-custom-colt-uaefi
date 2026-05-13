@@ -11,9 +11,7 @@ namespace {
 static constexpr size_t COLT_CAN_BUS = 0;
 static constexpr uint32_t COLT_MIL_BULB_CHECK_20MS_TICKS = 200; // 4 seconds
 static constexpr uint32_t COLT_MIL_SELF_CHECK_SETTLE_20MS_TICKS = 250; // 5 seconds total
-static constexpr uint32_t COLT_1E1_KEY_ON_CLEAR_START_20MS = 350; // 7.0s
-static constexpr uint32_t COLT_1E1_KEY_ON_CLEAR_END_20MS = 450;   // 9.0s
-static constexpr uint32_t COLT_1E1_POST_START_CLEAR_20MS = 50;    // 1.0s
+static constexpr uint32_t COLT_1E1_SELF_CHECK_20MS_TICKS = 400;   // 8.0s
 
 struct ColtRuntimeState {
 	bool brakePressed = false;
@@ -52,9 +50,9 @@ static uint16_t encodeColtDashRpm(float rpm) {
 	return static_cast<uint16_t>(raw);
 }
 
-static void sendFrame1E1() {
+static void sendFrame1E1(uint8_t byte0) {
 	CanTxMessage msg(CanCategory::NBC, 0x1E1, 8, COLT_CAN_BUS);
-	msg[0] = 0x00;
+	msg[0] = byte0;
 	msg[1] = 0x00;
 	msg[2] = 0x00;
 	msg[3] = 0x00;
@@ -213,19 +211,10 @@ void processColtCanTx(CanCycle cycle) {
 			g_engineRunning20msTicks = 0;
 		}
 
-		// Avoid continuous 0x1E1 conflict, but provide short clear windows:
-		// 1) around key-on self-check completion, 2) right after engine start.
-		const bool keyOnClearWindow =
+		const bool inKeyOnSelfCheck =
 			!isEngineRunning() &&
-			g_ignitionOn20msTicks >= COLT_1E1_KEY_ON_CLEAR_START_20MS &&
-			g_ignitionOn20msTicks <= COLT_1E1_KEY_ON_CLEAR_END_20MS;
-		const bool postStartClearWindow =
-			g_engineRunning20msTicks > 0 &&
-			g_engineRunning20msTicks <= COLT_1E1_POST_START_CLEAR_20MS;
-
-		if (keyOnClearWindow || postStartClearWindow) {
-			sendFrame1E1();
-		}
+			g_ignitionOn20msTicks <= COLT_1E1_SELF_CHECK_20MS_TICKS;
+		sendFrame1E1(inKeyOnSelfCheck ? 0x81 : 0x00);
 		sendFrame210();
 		sendFrame212();
 		sendFrame308();
