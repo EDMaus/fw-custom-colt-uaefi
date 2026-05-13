@@ -63,6 +63,13 @@ This file tracks the tested CAN states so we do not have to rediscover the same 
   - Restores ASC-good `0x212` pair from `26fd3233`: key-on `05 66 00 00 68 E9 00 00`, running `03 92 00 00 68 0F 00 00`.
   - This isolates whether the old SRS-positive `0x1E1` clear state and later ASC-positive `0x212` state can coexist without reintroducing the key-on `0x212` stock experiment.
 
+- `ACCkeyONstartidlebeepsrs.csv` finding
+  - Even with firmware `0x1E1 = 00...`, bus still carries continuous `0x1E1 = 81...` from another transmitter, causing mixed `0x1E1` status on the bus.
+  - This correlates with SRS staying solid then blinking and beep returning.
+  - Next targeted test restores the auxiliary status frames from the earlier SRS-positive baseline while keeping `0x1E1` clear and ASC-good `0x212`:
+    - Re-enable firmware TX for `0x408`, `0x412`, `0x416`, and `0x584`.
+    - Keep `0x423` and `0x443` not transmitted by firmware.
+
 ## Current open problem
 
 ASC and repeated beeps are improved with the current firmware, but SRS still blinks after the key-on self-check window and keeps blinking after start.
