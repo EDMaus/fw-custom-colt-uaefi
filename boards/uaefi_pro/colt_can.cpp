@@ -11,6 +11,7 @@ namespace {
 static constexpr size_t COLT_CAN_BUS = 0;
 static constexpr uint32_t COLT_MIL_BULB_CHECK_20MS_TICKS = 200; // 4 seconds
 static constexpr uint32_t COLT_MIL_SELF_CHECK_SETTLE_20MS_TICKS = 250; // 5 seconds total
+static constexpr uint32_t COLT_SRS_CLEAR_START_20MS_TICKS = 335; // ~6.7 seconds
 
 struct ColtRuntimeState {
 	bool brakePressed = false;
@@ -206,7 +207,8 @@ void processColtCanTx(CanCycle cycle) {
 		return;
 	}
 
-	if (cycle.isInterval(CI::_5ms) && isEngineRunning()) {
+	const bool shouldHoldSrsClear = isEngineRunning() || (g_ignitionOn20msTicks >= COLT_SRS_CLEAR_START_20MS_TICKS);
+	if (cycle.isInterval(CI::_5ms) && shouldHoldSrsClear) {
 		sendFrame1E1Clear();
 	}
 
