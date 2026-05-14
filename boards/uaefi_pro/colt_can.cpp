@@ -11,6 +11,7 @@ namespace {
 static constexpr size_t COLT_CAN_BUS = 0;
 static constexpr uint32_t COLT_MIL_BULB_CHECK_20MS_TICKS = 200; // 4 seconds
 static constexpr uint32_t COLT_MIL_SELF_CHECK_SETTLE_20MS_TICKS = 250; // 5 seconds total
+static constexpr uint32_t COLT_1E1_KEY_ON_SELF_CHECK_20MS_TICKS = 350; // ~7 seconds
 
 struct ColtRuntimeState {
 	bool brakePressed = false;
@@ -212,9 +213,9 @@ void processColtCanTx(CanCycle cycle) {
 	}
 
 	if (cycle.isInterval(CI::_5ms)) {
-		// Force a stable clear state on 0x1E1 to override conflicting 0x81 traffic
-		// from other modules that keeps SRS blinking.
-		sendFrame1E1(0x00);
+		// OEM-like behavior: SRS self-check on key-on, then clear while still key-on.
+		const bool keyOnSelfCheck = g_ignitionOn20msTicks <= COLT_1E1_KEY_ON_SELF_CHECK_20MS_TICKS;
+		sendFrame1E1(keyOnSelfCheck ? 0x81 : 0x00);
 		// Keep OEM-style 0x443 dominant versus conflicting 00 01 traffic.
 		sendFrame443();
 	}
