@@ -11,7 +11,6 @@ namespace {
 static constexpr size_t COLT_CAN_BUS = 0;
 static constexpr uint32_t COLT_MIL_BULB_CHECK_20MS_TICKS = 200; // 4 seconds
 static constexpr uint32_t COLT_MIL_SELF_CHECK_SETTLE_20MS_TICKS = 250; // 5 seconds total
-static constexpr uint32_t COLT_1E1_SELF_CHECK_20MS_TICKS = 350;   // 7.0s
 
 struct ColtRuntimeState {
 	bool brakePressed = false;
@@ -22,7 +21,6 @@ struct ColtRuntimeState {
 
 static ColtRuntimeState g_coltCanState;
 static uint32_t g_ignitionOn20msTicks = 0;
-static uint32_t g_engineRunning20msTicks = 0;
 
 static int getCurrentRpm() {
 	return static_cast<int>(Sensor::getOrZero(SensorType::Rpm));
@@ -195,7 +193,6 @@ void initColtCan() {
 #if !defined(EFI_BOOTLOADER) && EFI_CAN_SUPPORT
 	g_coltCanState = {};
 	g_ignitionOn20msTicks = 0;
-	g_engineRunning20msTicks = 0;
 #endif
 }
 
@@ -211,31 +208,26 @@ void processColtCanTx(CanCycle cycle) {
 #if !defined(EFI_BOOTLOADER) && EFI_CAN_SUPPORT
 	if (!isIgnitionOn()) {
 		g_ignitionOn20msTicks = 0;
-		g_engineRunning20msTicks = 0;
 		return;
 	}
 
+	if (cycle.isInterval(CI::_5ms)) {
+		// Force a stable clear state on 0x1E1 to override conflicting 0x81 traffic
+		// from other modules that keeps SRS blinking.
+		sendFrame1E1(0x00);
+	}
+
 	if (cycle.isInterval(CI::_10ms)) {
-		// Send 0x1E1 faster than most body traffic so the cluster sees a stable
-		// post-self-check clear state instead of falling back to 0x81.
-		const bool inKeyOnSelfCheck =
-			!isEngineRunning() &&
-			g_ignitionOn20msTicks <= COLT_1E1_SELF_CHECK_20MS_TICKS;
-		sendFrame1E1(inKeyOnSelfCheck ? 0x81 : 0x00);
+		// Keep OEM-style 0x443 dominant versus conflicting 00 01 traffic.
+		sendFrame443();
 	}
 
 	if (cycle.isInterval(CI::_20ms)) {
 		g_ignitionOn20msTicks++;
-		if (isEngineRunning()) {
-			g_engineRunning20msTicks++;
-		} else {
-			g_engineRunning20msTicks = 0;
-		}
 		sendFrame210();
 		sendFrame212();
 		sendFrame308();
 		sendFrame312();
-		sendFrame443();
 
 	}
 
