@@ -48,18 +48,6 @@ static uint16_t encodeColtDashRpm(float rpm) {
 	return static_cast<uint16_t>(raw);
 }
 
-static void sendFrame1E1(uint8_t byte0) {
-	CanTxMessage msg(CanCategory::NBC, 0x1E1, 8, COLT_CAN_BUS);
-	msg[0] = byte0;
-	msg[1] = 0x00;
-	msg[2] = 0x00;
-	msg[3] = 0x00;
-	msg[4] = 0x00;
-	msg[5] = 0x00;
-	msg[6] = 0x00;
-	msg[7] = 0x00;
-}
-
 static void sendFrame210() {
 	CanTxMessage msg(CanCategory::NBC, 0x210, 8, COLT_CAN_BUS);
 	msg[0] = 0x00;
@@ -149,28 +137,6 @@ static void sendFrame312() {
 	msg[7] = 0x8E;
 }
 
-static void sendFrame443() {
-	CanTxMessage msg(CanCategory::NBC, 0x443, 8, COLT_CAN_BUS);
-	msg[0] = 0x00;
-	msg[1] = 0x11;
-	msg[2] = 0x00;
-	msg[3] = 0x00;
-	msg[4] = 0x00;
-	msg[5] = 0x00;
-	msg[6] = 0x00;
-	msg[7] = 0x00;
-}
-
-static void sendFrame423() {
-	CanTxMessage msg(CanCategory::NBC, 0x423, 6, COLT_CAN_BUS);
-	msg[0] = 0x03;
-	msg[1] = 0x00;
-	msg[2] = 0x00;
-	msg[3] = 0x08;
-	msg[4] = 0x1D;
-	msg[5] = 0x59;
-}
-
 static void sendFrame608() {
 	CanTxMessage msg(CanCategory::NBC, 0x608, 8, COLT_CAN_BUS);
 
@@ -219,23 +185,6 @@ void processColtCanTx(CanCycle cycle) {
 	if (!isIgnitionOn()) {
 		g_ignitionOn20msTicks = 0;
 		return;
-	}
-
-	if (cycle.isInterval(CI::_5ms)) {
-		// KEY-ON stabilization: aggressively dominate conflicting body/SRS states.
-		// We send a duplicate frame in key-on (engine not running) to reduce
-		// chance that conflicting 81/00 and 00 01/00 11 traffic wins.
-		const bool keyOnOnly = !isEngineRunning();
-
-		sendFrame1E1(0x00);
-		sendFrame443();
-		sendFrame423();
-
-		if (keyOnOnly) {
-			sendFrame1E1(0x00);
-			sendFrame443();
-			sendFrame423();
-		}
 	}
 
 	if (cycle.isInterval(CI::_20ms)) {
