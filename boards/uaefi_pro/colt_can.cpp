@@ -160,19 +160,6 @@ static void sendFrame312() {
 	msg[7] = 0x8E;
 }
 
-static void sendFrame443() {
-	CanTxMessage msg(CanCategory::NBC, 0x443, 8, COLT_CAN_BUS);
-	msg[0] = 0x00;
-	// OEM baseline is 0x11, with bit0 set when AC request is active (0x13).
-	msg[1] = g_coltCanState.acRequest ? 0x13 : 0x11;
-	msg[2] = 0x00;
-	msg[3] = 0x00;
-	msg[4] = 0x00;
-	msg[5] = 0x00;
-	msg[6] = 0x00;
-	msg[7] = 0x00;
-}
-
 static void sendFrame608() {
 	CanTxMessage msg(CanCategory::NBC, 0x608, 8, COLT_CAN_BUS);
 
@@ -233,7 +220,6 @@ void processColtCanTx(CanCycle cycle) {
 		sendFrame212();
 		sendFrame308();
 		sendFrame312();
-		sendFrame443();
 
 	}
 
