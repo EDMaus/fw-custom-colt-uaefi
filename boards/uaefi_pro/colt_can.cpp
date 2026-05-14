@@ -215,9 +215,6 @@ void processColtCanTx(CanCycle cycle) {
 		// Force a stable clear state on 0x1E1 to override conflicting 0x81 traffic
 		// from other modules that keeps SRS blinking.
 		sendFrame1E1(0x00);
-	}
-
-	if (cycle.isInterval(CI::_10ms)) {
 		// Keep OEM-style 0x443 dominant versus conflicting 00 01 traffic.
 		sendFrame443();
 	}
