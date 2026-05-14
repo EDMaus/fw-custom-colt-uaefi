@@ -162,6 +162,16 @@ static void sendFrame443() {
 	msg[7] = 0x00;
 }
 
+static void sendFrame423() {
+	CanTxMessage msg(CanCategory::NBC, 0x423, 6, COLT_CAN_BUS);
+	msg[0] = 0x03;
+	msg[1] = 0x00;
+	msg[2] = 0x00;
+	msg[3] = 0x08;
+	msg[4] = 0x1D;
+	msg[5] = 0x59;
+}
+
 static void sendFrame608() {
 	CanTxMessage msg(CanCategory::NBC, 0x608, 8, COLT_CAN_BUS);
 
@@ -218,6 +228,8 @@ void processColtCanTx(CanCycle cycle) {
 		sendFrame1E1(keyOnSelfCheck ? 0x81 : 0x00);
 		// Keep OEM-style 0x443 dominant versus conflicting 00 01 traffic.
 		sendFrame443();
+		// Keep OEM-like body status scene dominant versus conflicting 2E BC values.
+		sendFrame423();
 	}
 
 	if (cycle.isInterval(CI::_20ms)) {
