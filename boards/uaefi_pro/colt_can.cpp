@@ -21,7 +21,6 @@ struct ColtRuntimeState {
 
 static ColtRuntimeState g_coltCanState;
 static uint32_t g_ignitionOn20msTicks = 0;
-static bool g_frame210Toggle = false;
 
 static int getCurrentRpm() {
 	return static_cast<int>(Sensor::getOrZero(SensorType::Rpm));
@@ -60,15 +59,9 @@ static void sendFrame210() {
 	msg[6] = 0x00;
 	msg[7] = 0xFF;
 
-	// OEM alternates two 0x210 states (byte3=0x40 and byte5=0x80). Mirror that pattern.
 	if (isEngineRunning()) {
-		if (g_frame210Toggle) {
-			msg[3] = 0x40;
-			msg[5] = 0x00;
-		} else {
-			msg[3] = 0x00;
-			msg[5] = 0x80;
-		}
+		msg[3] = 0x40;
+		msg[5] = 0x00;
 	}
 }
 
@@ -183,7 +176,6 @@ void initColtCan() {
 #if !defined(EFI_BOOTLOADER) && EFI_CAN_SUPPORT
 	g_coltCanState = {};
 	g_ignitionOn20msTicks = 0;
-	g_frame210Toggle = false;
 #endif
 }
 
@@ -204,7 +196,6 @@ void processColtCanTx(CanCycle cycle) {
 
 	if (cycle.isInterval(CI::_20ms)) {
 		g_ignitionOn20msTicks++;
-		g_frame210Toggle = !g_frame210Toggle;
 		sendFrame210();
 		sendFrame212();
 		sendFrame308();
