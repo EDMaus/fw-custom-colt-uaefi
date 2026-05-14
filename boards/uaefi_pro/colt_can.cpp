@@ -65,7 +65,8 @@ static void sendFrame210() {
 	CanTxMessage msg(CanCategory::NBC, 0x210, 8, COLT_CAN_BUS);
 	msg[0] = 0x00;
 	msg[1] = 0x00;
-	msg[2] = (!isEngineRunning() && g_ignitionOn20msTicks <= COLT_MIL_BULB_CHECK_20MS_TICKS) ? 0x01 : 0x00;
+	// OEM key-on behavior shows only a very short "01" phase here.
+	msg[2] = (!isEngineRunning() && g_ignitionOn20msTicks <= 1) ? 0x01 : 0x00;
 	msg[3] = 0x00;
 	msg[4] = 0x00;
 	msg[5] = 0x00;
@@ -110,7 +111,8 @@ static void sendFrame308() {
 
 	CanTxMessage msg(CanCategory::NBC, 0x308, 8, COLT_CAN_BUS);
 
-	msg[0] = 0x00;
+	// OEM key-on/running traces carry 0x80 in byte 0.
+	msg[0] = 0x80;
 	msg[1] = (rawRpm >> 8) & 0xFF;
 	msg[2] = rawRpm & 0xFF;
 	if (isEngineRunning()) {
@@ -126,7 +128,8 @@ static void sendFrame308() {
 			msg[3] = 0x04;
 			msg[4] = (g_ignitionOn20msTicks <= COLT_MIL_SELF_CHECK_SETTLE_20MS_TICKS) ? 0x01 : 0x00;
 		}
-		msg[5] = 0x33;
+		// OEM key-on reference shows 0x3E here.
+		msg[5] = 0x3E;
 	}
 	msg[6] = 0xFF;
 	msg[7] = 0x00;
