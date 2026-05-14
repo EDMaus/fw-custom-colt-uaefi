@@ -9,6 +9,9 @@
 namespace {
 
 static constexpr size_t COLT_CAN_BUS = 0;
+static constexpr uint32_t COLT_MIL_BULB_CHECK_20MS_TICKS = 200; // 4 seconds
+static constexpr uint32_t COLT_MIL_SELF_CHECK_SETTLE_20MS_TICKS = 250; // 5 seconds total
+static constexpr uint32_t COLT_SRS_SELF_CHECK_20MS_TICKS = 335; // ~6.7 seconds
 
 struct ColtRuntimeState {
 	bool brakePressed = false;
@@ -18,6 +21,7 @@ struct ColtRuntimeState {
 };
 
 static ColtRuntimeState g_coltCanState;
+static uint32_t g_ignitionOn20msTicks = 0;
 
 static int getCurrentRpm() {
 	return static_cast<int>(Sensor::getOrZero(SensorType::Rpm));
@@ -47,7 +51,8 @@ static uint16_t encodeColtDashRpm(float rpm) {
 
 static void sendFrame1E1() {
 	CanTxMessage msg(CanCategory::NBC, 0x1E1, 8, COLT_CAN_BUS);
-	msg[0] = 0x00;
+	const bool inSelfCheck = !isEngineRunning() && (g_ignitionOn20msTicks <= COLT_SRS_SELF_CHECK_20MS_TICKS);
+	msg[0] = inSelfCheck ? 0x81 : 0x00;
 	msg[1] = 0x00;
 	msg[2] = 0x00;
 	msg[3] = 0x00;
@@ -61,34 +66,37 @@ static void sendFrame210() {
 	CanTxMessage msg(CanCategory::NBC, 0x210, 8, COLT_CAN_BUS);
 	msg[0] = 0x00;
 	msg[1] = 0x00;
-	msg[2] = 0x00;
-	msg[3] = isEngineRunning() ? 0x40 : 0x00;
+	msg[2] = (!isEngineRunning() && g_ignitionOn20msTicks <= COLT_MIL_BULB_CHECK_20MS_TICKS) ? 0x01 : 0x00;
+	msg[3] = 0x00;
 	msg[4] = 0x00;
-	msg[5] = 0x00;
+	msg[5] = isEngineRunning() ? 0x80 : 0x00;
 	msg[6] = 0x00;
 	msg[7] = 0xFF;
 }
 
 static void sendFrame212() {
 	CanTxMessage msg(CanCategory::NBC, 0x212, 8, COLT_CAN_BUS);
-	if (isEngineRunning()) {
-		msg[0] = 0x03;
-		msg[1] = 0x92;
-		msg[2] = 0x00;
-		msg[3] = 0x00;
-		msg[4] = 0x68;
-		msg[5] = 0x0F;
-		msg[6] = 0x00;
-		msg[7] = 0x00;
-		return;
-	}
-
 	msg[0] = 0x05;
-	msg[1] = 0x66;
+	msg[1] = (g_ignitionOn20msTicks <= 8) ? 0x3F : 0x37;
 	msg[2] = 0x00;
 	msg[3] = 0x00;
 	msg[4] = 0x68;
-	msg[5] = 0xE9;
+	if (!isEngineRunning()) {
+		msg[5] = (g_ignitionOn20msTicks <= 8) ? 0xE0 : 0xDA;
+	} else {
+		const int rpm = getCurrentRpm();
+		if (rpm >= 1500) {
+			msg[5] = 0x2F;
+		} else if (rpm >= 1200) {
+			msg[5] = 0x31;
+		} else if (rpm >= 1000) {
+			msg[5] = 0x34;
+		} else if (rpm >= 900) {
+			msg[5] = 0x37;
+		} else {
+			msg[5] = 0x3A;
+		}
+	}
 	msg[6] = 0x00;
 	msg[7] = 0x00;
 }
@@ -107,9 +115,13 @@ static void sendFrame308() {
 		msg[5] = 0x53;
 		msg[6] = 0xFF;
 	} else {
-		msg[0] = 0x00;
-		msg[3] = 0x04;
-		msg[4] = 0x00;
+		if (g_ignitionOn20msTicks <= COLT_MIL_BULB_CHECK_20MS_TICKS) {
+			msg[3] = 0x06;
+			msg[4] = 0x01;
+		} else {
+			msg[3] = 0x04;
+			msg[4] = (g_ignitionOn20msTicks <= COLT_MIL_SELF_CHECK_SETTLE_20MS_TICKS) ? 0x01 : 0x00;
+		}
 		msg[5] = 0x33;
 	}
 	msg[6] = 0xFF;
@@ -141,81 +153,16 @@ static void sendFrame312() {
 	msg[7] = 0x8E;
 }
 
-static void sendFrame408() {
-	CanTxMessage msg(CanCategory::NBC, 0x408, 8, COLT_CAN_BUS);
-	if (isEngineRunning()) {
-		msg[0] = 0x0E;
-		msg[1] = 0x00;
-		msg[2] = 0x65;
-		msg[3] = 0x64;
-		msg[4] = 0xFE;
-		msg[5] = 0xC3;
-		msg[6] = 0x4F;
-		msg[7] = 0x00;
-		return;
-	}
-
-	msg[0] = 0x0F;
-	msg[1] = 0x00;
-	msg[2] = 0x63;
-	msg[3] = 0xFF;
-	msg[4] = 0xFE;
-	msg[5] = 0xC3;
-	msg[6] = 0x4F;
-	msg[7] = 0x00;
-}
-
-static void sendFrame412() {
-	CanTxMessage msg(CanCategory::NBC, 0x412, 8, COLT_CAN_BUS);
-	if (isEngineRunning()) {
-		msg[0] = 0x58;
-		msg[1] = 0x00;
-		msg[2] = 0x05;
-		msg[3] = 0xD7;
-		msg[4] = 0x8C;
-		msg[5] = 0x5C;
-		msg[6] = 0x01;
-		msg[7] = 0xFF;
-		return;
-	}
-
-	msg[0] = 0x58;
-	msg[1] = 0x00;
-	msg[2] = 0x05;
-	msg[3] = 0xD7;
-	msg[4] = 0x8C;
-	msg[5] = 0x5C;
-	msg[6] = 0x01;
-	msg[7] = 0xFF;
-}
-
-static void sendFrame416() {
-	const int rpm = getCurrentRpm();
-
-	CanTxMessage msg(CanCategory::NBC, 0x416, 8, COLT_CAN_BUS);
-	if (!isEngineRunning()) {
-		msg[0] = 0x75;
-	} else if (rpm < 900) {
-		msg[0] = 0x8D;
-	} else if (rpm < 1100) {
-		msg[0] = 0x8E;
-	} else if (rpm < 1500) {
-		msg[0] = 0x8F;
-	} else {
-		msg[0] = 0x90;
-	}
-	msg[1] = 0x00;
+static void sendFrame443() {
+	CanTxMessage msg(CanCategory::NBC, 0x443, 8, COLT_CAN_BUS);
+	msg[0] = 0x00;
+	msg[1] = isEngineRunning() ? 0x13 : 0x11;
 	msg[2] = 0x00;
 	msg[3] = 0x00;
 	msg[4] = 0x00;
 	msg[5] = 0x00;
 	msg[6] = 0x00;
 	msg[7] = 0x00;
-}
-
-static void sendFrame584() {
-	CanTxMessage msg(CanCategory::NBC, 0x584, 1, COLT_CAN_BUS);
-	msg[0] = 0xC0;
 }
 
 static void sendFrame608() {
@@ -249,6 +196,7 @@ static void sendFrame608() {
 void initColtCan() {
 #if !defined(EFI_BOOTLOADER) && EFI_CAN_SUPPORT
 	g_coltCanState = {};
+	g_ignitionOn20msTicks = 0;
 #endif
 }
 
@@ -263,29 +211,22 @@ bool isColtAcRequested() {
 void processColtCanTx(CanCycle cycle) {
 #if !defined(EFI_BOOTLOADER) && EFI_CAN_SUPPORT
 	if (!isIgnitionOn()) {
+		g_ignitionOn20msTicks = 0;
 		return;
 	}
 
 	if (cycle.isInterval(CI::_20ms)) {
+		g_ignitionOn20msTicks++;
 		sendFrame1E1();
 		sendFrame210();
 		sendFrame212();
 		sendFrame308();
 		sendFrame312();
-
-		static bool send40msThisTick = false;
-		send40msThisTick = !send40msThisTick;
-
-		if (send40msThisTick) {
-			sendFrame584();
-		}
+		sendFrame443();
 
 	}
 
 	if (cycle.isInterval(CI::_100ms)) {
-		sendFrame408();
-		sendFrame412();
-		sendFrame416();
 		sendFrame608();
 	}
 #else
