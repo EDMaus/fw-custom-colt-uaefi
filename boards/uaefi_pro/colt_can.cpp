@@ -223,13 +223,12 @@ void processColtCanTx(CanCycle cycle) {
 		return;
 	}
 
-	const bool shouldHoldSrsClear = isEngineRunning() || (g_ignitionOn20msTicks >= COLT_SRS_CLEAR_START_20MS_TICKS);
-	if (cycle.isInterval(CI::_5ms) && shouldHoldSrsClear) {
-		sendFrame1E1Clear();
-	}
-
 	if (cycle.isInterval(CI::_20ms)) {
 		g_ignitionOn20msTicks++;
+		const bool shouldHoldSrsClear = isEngineRunning() || (g_ignitionOn20msTicks >= COLT_SRS_CLEAR_START_20MS_TICKS);
+		if (shouldHoldSrsClear) {
+			sendFrame1E1Clear();
+		}
 		sendFrame210();
 		sendFrame212();
 		sendFrame308();
