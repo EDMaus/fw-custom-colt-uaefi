@@ -222,12 +222,20 @@ void processColtCanTx(CanCycle cycle) {
 	}
 
 	if (cycle.isInterval(CI::_5ms)) {
-		// Fast-path test: keep SRS clear state stable from key-on.
+		// KEY-ON stabilization: aggressively dominate conflicting body/SRS states.
+		// We send a duplicate frame in key-on (engine not running) to reduce
+		// chance that conflicting 81/00 and 00 01/00 11 traffic wins.
+		const bool keyOnOnly = !isEngineRunning();
+
 		sendFrame1E1(0x00);
-		// Keep OEM-style 0x443 dominant versus conflicting 00 01 traffic.
 		sendFrame443();
-		// Keep OEM-like body status scene dominant versus conflicting 2E BC values.
 		sendFrame423();
+
+		if (keyOnOnly) {
+			sendFrame1E1(0x00);
+			sendFrame443();
+			sendFrame423();
+		}
 	}
 
 	if (cycle.isInterval(CI::_20ms)) {
