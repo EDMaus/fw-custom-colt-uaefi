@@ -115,8 +115,7 @@ static void sendFrame308() {
 		msg[5] = 0x53;
 		msg[6] = 0xFF;
 	} else {
-		// Stock key-on baseline uses 0x00 in byte0.
-		msg[0] = 0x00;
+		msg[0] = 0x80;
 		if (g_ignitionOn20msTicks <= COLT_MIL_BULB_CHECK_20MS_TICKS) {
 			msg[3] = 0x06;
 			msg[4] = 0x01;
@@ -124,8 +123,7 @@ static void sendFrame308() {
 			msg[3] = 0x04;
 			msg[4] = (g_ignitionOn20msTicks <= COLT_MIL_SELF_CHECK_SETTLE_20MS_TICKS) ? 0x01 : 0x00;
 		}
-		// Stock key-on baseline uses 0x33 in byte5.
-		msg[5] = 0x33;
+		msg[5] = 0x3E;
 	}
 	msg[6] = 0xFF;
 	msg[7] = 0x00;
