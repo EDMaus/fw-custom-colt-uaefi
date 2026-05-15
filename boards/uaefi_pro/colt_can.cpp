@@ -74,9 +74,8 @@ static void sendFrame212() {
 	msg[4] = 0x68;
 
 	if (!isEngineRunning()) {
-		// OEM key-on baseline is predominantly: 05 66 00 00 68 E9 00 00
-		msg[1] = 0x66;
-		msg[5] = 0xE9;
+		msg[1] = 0x37;
+		msg[5] = 0xDA;
 	} else {
 		const int rpm = getCurrentRpm();
 		if (rpm >= 1500) {
