@@ -11,6 +11,7 @@ namespace {
 static constexpr size_t COLT_CAN_BUS = 0;
 static constexpr uint32_t COLT_MIL_BULB_CHECK_20MS_TICKS = 200; // 4 seconds
 static constexpr uint32_t COLT_MIL_SELF_CHECK_SETTLE_20MS_TICKS = 250; // 5 seconds total
+static constexpr uint32_t COLT_SRS_CLEAR_ENABLE_20MS_TICKS = 650; // ~13 seconds
 
 struct ColtRuntimeState {
 	bool brakePressed = false;
@@ -46,6 +47,18 @@ static uint16_t encodeColtDashRpm(float rpm) {
 	}
 
 	return static_cast<uint16_t>(raw);
+}
+
+static void sendFrame1E1Clear() {
+	CanTxMessage msg(CanCategory::NBC, 0x1E1, 8, COLT_CAN_BUS);
+	msg[0] = 0x00;
+	msg[1] = 0x00;
+	msg[2] = 0x00;
+	msg[3] = 0x00;
+	msg[4] = 0x00;
+	msg[5] = 0x00;
+	msg[6] = 0x00;
+	msg[7] = 0x00;
 }
 
 static void sendFrame210() {
@@ -247,6 +260,13 @@ void processColtCanRx(uint32_t id, const uint8_t* data, uint8_t dlc) {
 		case 0x443:
 			if (dlc > 0) {
 				g_coltCanState.acRequest = (data[0] & 0x01) != 0;
+			}
+			break;
+
+		case 0x1E1:
+			// After OEM-like self-check window, immediately clear any 0x81 assertion.
+			if (dlc > 0 && data[0] == 0x81 && g_ignitionOn20msTicks >= COLT_SRS_CLEAR_ENABLE_20MS_TICKS) {
+				sendFrame1E1Clear();
 			}
 			break;
 
