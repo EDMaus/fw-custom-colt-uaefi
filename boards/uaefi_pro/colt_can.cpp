@@ -11,7 +11,6 @@ namespace {
 static constexpr size_t COLT_CAN_BUS = 0;
 static constexpr uint32_t COLT_MIL_BULB_CHECK_20MS_TICKS = 200; // 4 seconds
 static constexpr uint32_t COLT_MIL_SELF_CHECK_SETTLE_20MS_TICKS = 250; // 5 seconds total
-static constexpr uint32_t COLT_SRS_CLEAR_AFTER_SELF_CHECK_20MS_TICKS = 660; // 13.2 seconds
 
 struct ColtRuntimeState {
 	bool brakePressed = false;
@@ -47,18 +46,6 @@ static uint16_t encodeColtDashRpm(float rpm) {
 	}
 
 	return static_cast<uint16_t>(raw);
-}
-
-static void sendFrame1E1Clear() {
-	CanTxMessage msg(CanCategory::NBC, 0x1E1, 8, COLT_CAN_BUS);
-	msg[0] = 0x00;
-	msg[1] = 0x00;
-	msg[2] = 0x00;
-	msg[3] = 0x00;
-	msg[4] = 0x00;
-	msg[5] = 0x00;
-	msg[6] = 0x00;
-	msg[7] = 0x00;
 }
 
 static void sendFrame210() {
@@ -169,6 +156,18 @@ static void sendFrame312() {
 	msg[7] = 0x8E;
 }
 
+static void sendFrame443() {
+	CanTxMessage msg(CanCategory::NBC, 0x443, 8, COLT_CAN_BUS);
+	msg[0] = 0x00;
+	msg[1] = 0x11;
+	msg[2] = 0x00;
+	msg[3] = 0x00;
+	msg[4] = 0x00;
+	msg[5] = 0x00;
+	msg[6] = 0x00;
+	msg[7] = 0x00;
+}
+
 static void sendFrame608() {
 	CanTxMessage msg(CanCategory::NBC, 0x608, 8, COLT_CAN_BUS);
 
@@ -225,10 +224,7 @@ void processColtCanTx(CanCycle cycle) {
 		sendFrame212();
 		sendFrame308();
 		sendFrame312();
-
-		if (g_ignitionOn20msTicks >= COLT_SRS_CLEAR_AFTER_SELF_CHECK_20MS_TICKS) {
-			sendFrame1E1Clear();
-		}
+		sendFrame443();
 	}
 
 	if (cycle.isInterval(CI::_100ms)) {
