@@ -11,7 +11,6 @@ namespace {
 static constexpr size_t COLT_CAN_BUS = 0;
 static constexpr uint32_t COLT_MIL_BULB_CHECK_20MS_TICKS = 200; // 4 seconds
 static constexpr uint32_t COLT_MIL_SELF_CHECK_SETTLE_20MS_TICKS = 250; // 5 seconds total
-static constexpr uint32_t COLT_KEY_ON_INIT_BURST_20MS_TICKS = 25;
 
 struct ColtRuntimeState {
 	bool brakePressed = false;
@@ -47,49 +46,6 @@ static uint16_t encodeColtDashRpm(float rpm) {
 	}
 
 	return static_cast<uint16_t>(raw);
-}
-
-static void sendFrame101InitPrimary() {
-	CanTxMessage msg(CanCategory::NBC, 0x101, 8, COLT_CAN_BUS);
-	msg[0] = 0x00;
-	msg[1] = 0x11;
-	msg[2] = 0x51;
-	msg[3] = 0xEE;
-	msg[4] = 0xAE;
-	msg[5] = 0x00;
-	msg[6] = 0x00;
-	msg[7] = 0x22;
-}
-
-static void sendFrame101InitSecondary() {
-	CanTxMessage msg(CanCategory::NBC, 0x101, 8, COLT_CAN_BUS);
-	msg[0] = 0xFF;
-	msg[1] = 0x00;
-	msg[2] = 0x00;
-	msg[3] = 0x00;
-	msg[4] = 0x00;
-	msg[5] = 0x00;
-	msg[6] = 0x00;
-	msg[7] = 0x00;
-}
-
-static void sendFrame111Init() {
-	CanTxMessage msg(CanCategory::NBC, 0x111, 8, COLT_CAN_BUS);
-	msg[0] = 0x00;
-	msg[1] = 0xF8;
-	msg[2] = 0x89;
-	msg[3] = 0x42;
-	msg[4] = 0x00;
-	msg[5] = 0x00;
-	msg[6] = 0x00;
-	msg[7] = 0x00;
-}
-
-static void sendKeyOnInitBurst() {
-	sendFrame101InitPrimary();
-	sendFrame111Init();
-	sendFrame101InitSecondary();
-	sendFrame111Init();
 }
 
 static void sendFrame210() {
@@ -252,9 +208,6 @@ void processColtCanTx(CanCycle cycle) {
 
 	if (cycle.isInterval(CI::_20ms)) {
 		g_ignitionOn20msTicks++;
-		if (g_ignitionOn20msTicks <= COLT_KEY_ON_INIT_BURST_20MS_TICKS) {
-			sendKeyOnInitBurst();
-		}
 		sendFrame210();
 		sendFrame212();
 		sendFrame308();
