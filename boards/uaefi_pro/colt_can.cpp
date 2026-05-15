@@ -81,26 +81,34 @@ static void sendFrame210() {
 static void sendFrame212() {
 	CanTxMessage msg(CanCategory::NBC, 0x212, 8, COLT_CAN_BUS);
 	msg[0] = 0x05;
-	msg[1] = (g_ignitionOn20msTicks <= 8) ? 0x3F : 0x37;
 	msg[2] = 0x00;
 	msg[3] = 0x00;
 	msg[4] = 0x68;
+
 	if (!isEngineRunning()) {
-		msg[5] = (g_ignitionOn20msTicks <= 8) ? 0xE0 : 0xDA;
+		// OEM key-on baseline is predominantly: 05 66 00 00 68 E9 00 00
+		msg[1] = 0x66;
+		msg[5] = 0xE9;
 	} else {
 		const int rpm = getCurrentRpm();
 		if (rpm >= 1500) {
+			msg[1] = 0x20;
 			msg[5] = 0x2F;
 		} else if (rpm >= 1200) {
+			msg[1] = 0x28;
 			msg[5] = 0x31;
 		} else if (rpm >= 1000) {
+			msg[1] = 0x37;
 			msg[5] = 0x34;
 		} else if (rpm >= 900) {
+			msg[1] = 0x37;
 			msg[5] = 0x37;
 		} else {
+			msg[1] = 0x37;
 			msg[5] = 0x3A;
 		}
 	}
+
 	msg[6] = 0x00;
 	msg[7] = 0x00;
 }
