@@ -54,7 +54,7 @@ static void sendFrame210() {
 	msg[1] = 0x00;
 	// OEM key-on behavior shows only a very short "01" phase here.
 	msg[2] = (!isEngineRunning() && g_ignitionOn20msTicks <= 1) ? 0x01 : 0x00;
-	msg[3] = 0x00;
+	msg[3] = 0x40;
 	msg[4] = 0x00;
 	msg[5] = 0x00;
 	msg[6] = 0x00;
