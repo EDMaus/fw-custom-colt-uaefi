@@ -106,6 +106,19 @@ static void sendFrame212() {
 	msg[7] = 0x00;
 }
 
+static void sendFrame443() {
+	CanTxMessage msg(CanCategory::NBC, 0x443, 8, COLT_CAN_BUS);
+	msg[0] = 0x00;
+	// OEM baseline is predominantly 00 11, with 00 13 when A/C is active.
+	msg[1] = g_coltCanState.acRequest ? 0x13 : 0x11;
+	msg[2] = 0x00;
+	msg[3] = 0x00;
+	msg[4] = 0x00;
+	msg[5] = 0x00;
+	msg[6] = 0x00;
+	msg[7] = 0x00;
+}
+
 static void sendFrame308() {
 	const uint16_t rawRpm = encodeColtDashRpm(Sensor::getOrZero(SensorType::Rpm));
 
@@ -218,6 +231,7 @@ void processColtCanTx(CanCycle cycle) {
 		}
 		sendFrame210();
 		sendFrame212();
+		sendFrame443();
 		sendFrame308();
 		sendFrame312();
 
@@ -255,13 +269,6 @@ void processColtCanRx(uint32_t id, const uint8_t* data, uint8_t dlc) {
 		case 0x443:
 			if (dlc > 0) {
 				g_coltCanState.acRequest = (data[0] & 0x01) != 0;
-			}
-			break;
-
-		case 0x1E1:
-			// If another module asserts "81" status, immediately re-assert clear.
-			if (dlc > 0 && data[0] == 0x81 && isIgnitionOn()) {
-				sendFrame1E1Clear();
 			}
 			break;
 
