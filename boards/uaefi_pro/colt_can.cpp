@@ -118,16 +118,17 @@ static void sendFrame308() {
 
 	CanTxMessage msg(CanCategory::NBC, 0x308, 8, COLT_CAN_BUS);
 
-	// OEM key-on/running traces carry 0x80 in byte 0.
-	msg[0] = 0x80;
 	msg[1] = (rawRpm >> 8) & 0xFF;
 	msg[2] = rawRpm & 0xFF;
 	if (isEngineRunning()) {
+		msg[0] = 0x80;
 		msg[3] = 0x00;
 		msg[4] = 0x00;
 		msg[5] = 0x53;
 		msg[6] = 0xFF;
 	} else {
+		// Stock key-on baseline uses 0x00 in byte0.
+		msg[0] = 0x00;
 		if (g_ignitionOn20msTicks <= COLT_MIL_BULB_CHECK_20MS_TICKS) {
 			msg[3] = 0x06;
 			msg[4] = 0x01;
@@ -135,8 +136,8 @@ static void sendFrame308() {
 			msg[3] = 0x04;
 			msg[4] = (g_ignitionOn20msTicks <= COLT_MIL_SELF_CHECK_SETTLE_20MS_TICKS) ? 0x01 : 0x00;
 		}
-		// OEM key-on reference shows 0x3E here.
-		msg[5] = 0x3E;
+		// Stock key-on baseline uses 0x33 in byte5.
+		msg[5] = 0x33;
 	}
 	msg[6] = 0xFF;
 	msg[7] = 0x00;
