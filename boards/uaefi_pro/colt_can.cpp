@@ -125,7 +125,7 @@ static void sendFrame308() {
 		msg[0] = 0x80;
 		msg[3] = 0x00;
 		msg[4] = 0x00;
-		msg[5] = 0x53;
+		msg[5] = 0x3E;
 		msg[6] = 0xFF;
 	} else {
 		msg[0] = 0x80;
