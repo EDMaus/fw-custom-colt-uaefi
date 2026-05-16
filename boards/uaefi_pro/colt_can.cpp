@@ -11,6 +11,7 @@ namespace {
 static constexpr size_t COLT_CAN_BUS = 0;
 static constexpr uint32_t COLT_MIL_BULB_CHECK_20MS_TICKS = 200; // 4 seconds
 static constexpr uint32_t COLT_MIL_SELF_CHECK_SETTLE_20MS_TICKS = 250; // 5 seconds total
+static constexpr uint32_t COLT_1E1_CLEAR_BURST_5MS_TICKS = 50; // 250ms
 
 struct ColtRuntimeState {
 	bool brakePressed = false;
@@ -21,6 +22,7 @@ struct ColtRuntimeState {
 
 static ColtRuntimeState g_coltCanState;
 static uint32_t g_ignitionOn20msTicks = 0;
+static uint32_t g_1e1ClearBurst5msTicks = 0;
 
 static int getCurrentRpm() {
 	return static_cast<int>(Sensor::getOrZero(SensorType::Rpm));
@@ -209,6 +211,7 @@ void initColtCan() {
 #if !defined(EFI_BOOTLOADER) && EFI_CAN_SUPPORT
 	g_coltCanState = {};
 	g_ignitionOn20msTicks = 0;
+	g_1e1ClearBurst5msTicks = 0;
 #endif
 }
 
@@ -224,12 +227,22 @@ void processColtCanTx(CanCycle cycle) {
 #if !defined(EFI_BOOTLOADER) && EFI_CAN_SUPPORT
 	if (!isIgnitionOn()) {
 		g_ignitionOn20msTicks = 0;
+		g_1e1ClearBurst5msTicks = 0;
 		return;
+	}
+
+	if (cycle.isInterval(CI::_5ms)) {
+		sendFrame1E1();
+
+		if (g_1e1ClearBurst5msTicks > 0) {
+			sendFrame1E1();
+			sendFrame1E1();
+			g_1e1ClearBurst5msTicks--;
+		}
 	}
 
 	if (cycle.isInterval(CI::_20ms)) {
 		g_ignitionOn20msTicks++;
-		sendFrame1E1();
 		sendFrame210();
 		sendFrame212();
 		sendFrame308();
@@ -250,6 +263,7 @@ void processColtCanTx(CanCycle cycle) {
 void processColtCanRx(uint32_t id, const uint8_t* data, uint8_t dlc) {
 #if !defined(EFI_BOOTLOADER) && EFI_CAN_SUPPORT
 	if (id == 0x1E1 && dlc > 0 && data[0] == 0x81) {
+		g_1e1ClearBurst5msTicks = COLT_1E1_CLEAR_BURST_5MS_TICKS;
 		sendFrame1E1();
 		sendFrame1E1();
 		sendFrame1E1();
