@@ -23,6 +23,8 @@ struct ColtRuntimeState {
 static ColtRuntimeState g_coltCanState;
 static uint32_t g_ignitionOn20msTicks = 0;
 static uint32_t g_1e1ClearBurst5msTicks = 0;
+static uint8_t g_startupInitSequence5msTick = 0;
+static bool g_startupInitSequenceSent = false;
 
 static int getCurrentRpm() {
 	return static_cast<int>(Sensor::getOrZero(SensorType::Rpm));
@@ -48,6 +50,73 @@ static uint16_t encodeColtDashRpm(float rpm) {
 	}
 
 	return static_cast<uint16_t>(raw);
+}
+
+static void sendFrame101Primary() {
+	CanTxMessage msg(CanCategory::NBC, 0x101, 8, COLT_CAN_BUS);
+	msg[0] = 0x00;
+	msg[1] = 0x9A;
+	msg[2] = 0x78;
+	msg[3] = 0x07;
+	msg[4] = 0x87;
+	msg[5] = 0x5E;
+	msg[6] = 0x00;
+	msg[7] = 0x92;
+}
+
+static void sendFrame101Ff() {
+	CanTxMessage msg(CanCategory::NBC, 0x101, 8, COLT_CAN_BUS);
+	msg[0] = 0xFF;
+	msg[1] = 0x00;
+	msg[2] = 0x00;
+	msg[3] = 0x00;
+	msg[4] = 0x00;
+	msg[5] = 0x00;
+	msg[6] = 0x00;
+	msg[7] = 0x00;
+}
+
+static void sendFrame111() {
+	CanTxMessage msg(CanCategory::NBC, 0x111, 8, COLT_CAN_BUS);
+	msg[0] = 0x00;
+	msg[1] = 0x0B;
+	msg[2] = 0x0C;
+	msg[3] = 0xEE;
+	msg[4] = 0x00;
+	msg[5] = 0x00;
+	msg[6] = 0x00;
+	msg[7] = 0x00;
+}
+
+static void processStartupInitSequence() {
+	if (g_startupInitSequence5msTick == 0) {
+		return;
+	}
+
+	switch (g_startupInitSequence5msTick) {
+		case 10:
+			sendFrame101Primary();
+			break;
+
+		case 13:
+			sendFrame111();
+			break;
+
+		case 14:
+			sendFrame101Ff();
+			break;
+
+		case 15:
+			sendFrame111();
+			g_startupInitSequenceSent = true;
+			g_startupInitSequence5msTick = 0;
+			return;
+
+		default:
+			break;
+	}
+
+	g_startupInitSequence5msTick++;
 }
 
 static void sendFrame1E1() {
@@ -125,7 +194,7 @@ static void sendFrame308() {
 		msg[0] = 0x80;
 		msg[3] = 0x00;
 		msg[4] = 0x00;
-		msg[5] = 0x3E;
+		msg[5] = 0x53;
 		msg[6] = 0xFF;
 	} else {
 		msg[0] = 0x80;
@@ -212,6 +281,8 @@ void initColtCan() {
 	g_coltCanState = {};
 	g_ignitionOn20msTicks = 0;
 	g_1e1ClearBurst5msTicks = 0;
+	g_startupInitSequence5msTick = 0;
+	g_startupInitSequenceSent = false;
 #endif
 }
 
@@ -228,11 +299,14 @@ void processColtCanTx(CanCycle cycle) {
 	if (!isIgnitionOn()) {
 		g_ignitionOn20msTicks = 0;
 		g_1e1ClearBurst5msTicks = 0;
+		g_startupInitSequence5msTick = 0;
+		g_startupInitSequenceSent = false;
 		return;
 	}
 
 	if (cycle.isInterval(CI::_5ms)) {
 		sendFrame1E1();
+		processStartupInitSequence();
 
 		if (g_1e1ClearBurst5msTicks > 0) {
 			sendFrame1E1();
@@ -262,6 +336,10 @@ void processColtCanTx(CanCycle cycle) {
 
 void processColtCanRx(uint32_t id, const uint8_t* data, uint8_t dlc) {
 #if !defined(EFI_BOOTLOADER) && EFI_CAN_SUPPORT
+	if (id == 0x002 && dlc >= 2 && data[0] == 0x00 && data[1] == 0x00 && !g_startupInitSequenceSent && g_startupInitSequence5msTick == 0) {
+		g_startupInitSequence5msTick = 1;
+	}
+
 	if (id == 0x1E1 && dlc > 0 && data[0] == 0x81) {
 		g_1e1ClearBurst5msTicks = COLT_1E1_CLEAR_BURST_5MS_TICKS;
 		sendFrame1E1();
