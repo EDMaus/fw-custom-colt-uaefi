@@ -251,6 +251,8 @@ void processColtCanRx(uint32_t id, const uint8_t* data, uint8_t dlc) {
 #if !defined(EFI_BOOTLOADER) && EFI_CAN_SUPPORT
 	if (id == 0x1E1 && dlc > 0 && data[0] == 0x81) {
 		sendFrame1E1();
+		sendFrame1E1();
+		sendFrame1E1();
 	}
 
 	switch (id) {
