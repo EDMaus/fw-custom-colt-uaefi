@@ -301,16 +301,11 @@ void processColtCanTx(CanCycle cycle) {
 	const bool ignitionOn = isIgnitionOn();
 
 	if (cycle.isInterval(CI::_5ms)) {
-		if (!g_startupInitSequenceSent && g_startupInitSequence5msTick == 0) {
-			g_startupInitSequence5msTick = 1;
-		}
-
 		processStartupInitSequence();
 	}
 
 	if (!ignitionOn) {
-		if (g_wasIgnitionOn) {
-			g_startupInitSequence5msTick = 0;
+		if (g_wasIgnitionOn && g_startupInitSequence5msTick == 0) {
 			g_startupInitSequenceSent = false;
 		}
 
@@ -353,6 +348,10 @@ void processColtCanTx(CanCycle cycle) {
 
 void processColtCanRx(uint32_t id, const uint8_t* data, uint8_t dlc) {
 #if !defined(EFI_BOOTLOADER) && EFI_CAN_SUPPORT
+	if (id == 0x002 && dlc >= 2 && data[0] == 0x00 && data[1] == 0x00 && !g_startupInitSequenceSent && g_startupInitSequence5msTick == 0) {
+		g_startupInitSequence5msTick = 1;
+	}
+
 	if (id == 0x1E1 && dlc > 0 && data[0] == 0x81) {
 		g_1e1ClearBurst5msTicks = COLT_1E1_CLEAR_BURST_5MS_TICKS;
 		sendFrame1E1();
