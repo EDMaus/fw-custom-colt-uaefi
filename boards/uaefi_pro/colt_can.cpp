@@ -25,6 +25,7 @@ static uint32_t g_ignitionOn20msTicks = 0;
 static uint32_t g_1e1ClearBurst5msTicks = 0;
 static uint8_t g_startupInitSequence5msTick = 0;
 static bool g_startupInitSequenceSent = false;
+static bool g_wasIgnitionOn = false;
 
 static int getCurrentRpm() {
 	return static_cast<int>(Sensor::getOrZero(SensorType::Rpm));
@@ -283,6 +284,7 @@ void initColtCan() {
 	g_1e1ClearBurst5msTicks = 0;
 	g_startupInitSequence5msTick = 0;
 	g_startupInitSequenceSent = false;
+	g_wasIgnitionOn = false;
 #endif
 }
 
@@ -296,17 +298,28 @@ bool isColtAcRequested() {
 
 void processColtCanTx(CanCycle cycle) {
 #if !defined(EFI_BOOTLOADER) && EFI_CAN_SUPPORT
-	if (!isIgnitionOn()) {
+	const bool ignitionOn = isIgnitionOn();
+
+	if (cycle.isInterval(CI::_5ms)) {
+		processStartupInitSequence();
+	}
+
+	if (!ignitionOn) {
+		if (g_wasIgnitionOn) {
+			g_startupInitSequence5msTick = 0;
+			g_startupInitSequenceSent = false;
+		}
+
+		g_wasIgnitionOn = false;
 		g_ignitionOn20msTicks = 0;
 		g_1e1ClearBurst5msTicks = 0;
-		g_startupInitSequence5msTick = 0;
-		g_startupInitSequenceSent = false;
 		return;
 	}
 
+	g_wasIgnitionOn = true;
+
 	if (cycle.isInterval(CI::_5ms)) {
 		sendFrame1E1();
-		processStartupInitSequence();
 
 		if (g_1e1ClearBurst5msTicks > 0) {
 			sendFrame1E1();
