@@ -11,7 +11,7 @@ namespace {
 static constexpr size_t COLT_CAN_BUS = 0;
 static constexpr uint32_t COLT_MIL_BULB_CHECK_20MS_TICKS = 200; // 4 seconds
 static constexpr uint32_t COLT_MIL_SELF_CHECK_SETTLE_20MS_TICKS = 250; // 5 seconds total
-static constexpr uint32_t COLT_1E1_CLEAR_BURST_5MS_TICKS = 50; // 250ms
+static constexpr uint32_t COLT_1E1_CLEAR_BURST_5MS_TICKS = 100; // 500ms
 
 struct ColtRuntimeState {
 	bool brakePressed = false;
@@ -302,6 +302,10 @@ void processColtCanTx(CanCycle cycle) {
 
 	if (cycle.isInterval(CI::_5ms)) {
 		processStartupInitSequence();
+		if (g_1e1ClearBurst5msTicks > 0) {
+			sendFrame1E1();
+			g_1e1ClearBurst5msTicks--;
+		}
 	}
 
 	if (!ignitionOn) {
@@ -311,7 +315,6 @@ void processColtCanTx(CanCycle cycle) {
 
 		g_wasIgnitionOn = false;
 		g_ignitionOn20msTicks = 0;
-		g_1e1ClearBurst5msTicks = 0;
 		return;
 	}
 
@@ -323,7 +326,6 @@ void processColtCanTx(CanCycle cycle) {
 		if (g_1e1ClearBurst5msTicks > 0) {
 			sendFrame1E1();
 			sendFrame1E1();
-			g_1e1ClearBurst5msTicks--;
 		}
 	}
 
