@@ -11,7 +11,7 @@ namespace {
 static constexpr size_t COLT_CAN_BUS = 0;
 static constexpr uint32_t COLT_MIL_BULB_CHECK_20MS_TICKS = 200; // 4 seconds
 static constexpr uint32_t COLT_MIL_SELF_CHECK_SETTLE_20MS_TICKS = 250; // 5 seconds total
-static constexpr uint32_t COLT_1E1_CLEAR_BURST_5MS_TICKS = 100; // 500ms
+static constexpr uint32_t COLT_1E1_CLEAR_BURST_5MS_TICKS = 200; // 1000ms
 
 struct ColtRuntimeState {
 	bool brakePressed = false;
@@ -130,6 +130,13 @@ static void sendFrame1E1() {
 	msg[5] = 0x00;
 	msg[6] = 0x00;
 	msg[7] = 0x00;
+}
+
+static void trigger1E1ClearBurst() {
+	g_1e1ClearBurst5msTicks = COLT_1E1_CLEAR_BURST_5MS_TICKS;
+	sendFrame1E1();
+	sendFrame1E1();
+	sendFrame1E1();
 }
 
 static void sendFrame210() {
@@ -304,6 +311,9 @@ void processColtCanTx(CanCycle cycle) {
 		processStartupInitSequence();
 		if (g_1e1ClearBurst5msTicks > 0) {
 			sendFrame1E1();
+			sendFrame1E1();
+			sendFrame1E1();
+			sendFrame1E1();
 			g_1e1ClearBurst5msTicks--;
 		}
 	}
@@ -355,10 +365,11 @@ void processColtCanRx(uint32_t id, const uint8_t* data, uint8_t dlc) {
 	}
 
 	if (id == 0x1E1 && dlc > 0 && data[0] == 0x81) {
-		g_1e1ClearBurst5msTicks = COLT_1E1_CLEAR_BURST_5MS_TICKS;
-		sendFrame1E1();
-		sendFrame1E1();
-		sendFrame1E1();
+		trigger1E1ClearBurst();
+	}
+
+	if (id == 0x2F1 && dlc >= 2 && data[0] == 0x00 && data[1] == 0x81) {
+		trigger1E1ClearBurst();
 	}
 
 	switch (id) {
