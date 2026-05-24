@@ -360,8 +360,12 @@ void processColtCanTx(CanCycle cycle) {
 
 void processColtCanRx(uint32_t id, const uint8_t* data, uint8_t dlc) {
 #if !defined(EFI_BOOTLOADER) && EFI_CAN_SUPPORT
-	if (id == 0x002 && dlc >= 2 && data[0] == 0x00 && data[1] == 0x00 && !g_startupInitSequenceSent && g_startupInitSequence5msTick == 0) {
-		g_startupInitSequence5msTick = 1;
+	if (id == 0x002 && dlc >= 2 && data[0] == 0x00 && data[1] == 0x00) {
+		trigger1E1ClearBurst();
+
+		if (!g_startupInitSequenceSent && g_startupInitSequence5msTick == 0) {
+			g_startupInitSequence5msTick = 1;
+		}
 	}
 
 	if (id == 0x1E1 && dlc > 0 && data[0] == 0x81) {
