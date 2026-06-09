@@ -308,6 +308,10 @@ void processColtCanTx(CanCycle cycle) {
 	const bool ignitionOn = isIgnitionOn();
 
 	if (cycle.isInterval(CI::_5ms)) {
+		if (!g_startupInitSequenceSent && g_startupInitSequence5msTick == 0) {
+			g_startupInitSequence5msTick = 1;
+		}
+
 		processStartupInitSequence();
 		if (g_1e1ClearBurst5msTicks > 0) {
 			sendFrame1E1();
@@ -361,8 +365,6 @@ void processColtCanTx(CanCycle cycle) {
 void processColtCanRx(uint32_t id, const uint8_t* data, uint8_t dlc) {
 #if !defined(EFI_BOOTLOADER) && EFI_CAN_SUPPORT
 	if (id == 0x002 && dlc >= 2 && data[0] == 0x00 && data[1] == 0x00) {
-		trigger1E1ClearBurst();
-
 		if (!g_startupInitSequenceSent && g_startupInitSequence5msTick == 0) {
 			g_startupInitSequence5msTick = 1;
 		}
