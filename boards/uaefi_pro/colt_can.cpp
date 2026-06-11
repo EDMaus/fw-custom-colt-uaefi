@@ -14,6 +14,7 @@ static constexpr uint32_t COLT_MIL_SELF_CHECK_SETTLE_20MS_TICKS = 250; // 5 seco
 static constexpr uint32_t COLT_1E1_CLEAR_BURST_5MS_TICKS = 200; // 1000ms
 static constexpr uint32_t COLT_STARTUP_INIT_REPEAT_MS = 30000;
 static constexpr uint32_t COLT_STARTUP_INIT_REPEAT_20MS_TICKS = COLT_STARTUP_INIT_REPEAT_MS / 20;
+static constexpr uint32_t COLT_2F1_CLEAR_COOLDOWN_5MS_TICKS = 200; // 1000ms
 
 struct ColtRuntimeState {
 	bool brakePressed = false;
@@ -25,6 +26,7 @@ struct ColtRuntimeState {
 static ColtRuntimeState g_coltCanState;
 static uint32_t g_ignitionOn20msTicks = 0;
 static uint32_t g_1e1ClearBurst5msTicks = 0;
+static uint32_t g_2f1ClearCooldown5msTicks = 0;
 static uint32_t g_startupInitRepeat20msTicks = 0;
 static uint8_t g_startupInitSequence5msTick = 0;
 static bool g_startupInitSequenceSent = false;
@@ -171,6 +173,12 @@ static void sendFrame1E1() {
 
 static void trigger1E1ClearBurst() {
 	g_1e1ClearBurst5msTicks = COLT_1E1_CLEAR_BURST_5MS_TICKS;
+	sendFrame1E1();
+	sendFrame1E1();
+	sendFrame1E1();
+}
+
+static void trigger1E1ClearOnly() {
 	sendFrame1E1();
 	sendFrame1E1();
 	sendFrame1E1();
@@ -326,6 +334,7 @@ void initColtCan() {
 	g_coltCanState = {};
 	g_ignitionOn20msTicks = 0;
 	g_1e1ClearBurst5msTicks = 0;
+	g_2f1ClearCooldown5msTicks = 0;
 	g_startupInitRepeat20msTicks = 0;
 	g_startupInitSequence5msTick = 0;
 	g_startupInitSequenceSent = false;
@@ -355,6 +364,10 @@ void processColtCanTx(CanCycle cycle) {
 			sendFrame1E1();
 			g_1e1ClearBurst5msTicks--;
 		}
+
+		if (g_2f1ClearCooldown5msTicks > 0) {
+			g_2f1ClearCooldown5msTicks--;
+		}
 	}
 
 	if (!ignitionOn) {
@@ -366,6 +379,10 @@ void processColtCanTx(CanCycle cycle) {
 		g_ignitionOn20msTicks = 0;
 		g_startupInitRepeat20msTicks = 0;
 		return;
+	}
+
+	if (!g_wasIgnitionOn) {
+		startStartupInitSequence(false);
 	}
 
 	g_wasIgnitionOn = true;
@@ -409,7 +426,10 @@ void processColtCanRx(uint32_t id, const uint8_t* data, uint8_t dlc) {
 	}
 
 	if (id == 0x2F1 && dlc >= 2 && data[0] == 0x00 && data[1] == 0x81) {
-		trigger1E1ClearBurst();
+		if (g_2f1ClearCooldown5msTicks == 0) {
+			trigger1E1ClearOnly();
+			g_2f1ClearCooldown5msTicks = COLT_2F1_CLEAR_COOLDOWN_5MS_TICKS;
+		}
 	}
 
 	switch (id) {
