@@ -31,6 +31,7 @@ static uint32_t g_startupInitRepeat20msTicks = 0;
 static uint8_t g_startupInitSequence5msTick = 0;
 static bool g_startupInitSequenceSent = false;
 static bool g_startupInitSequenceRefresh = false;
+static bool g_coltFanTestHotLatched = false;
 static bool g_wasIgnitionOn = false;
 
 static int getCurrentRpm() {
@@ -42,7 +43,15 @@ static bool isEngineRunning() {
 }
 
 static bool isColtFanTestHot() {
-	return Sensor::getOrZero(SensorType::Clt) >= 95.0f;
+	const float clt = Sensor::getOrZero(SensorType::Clt);
+
+	if (clt >= 95.0f) {
+		g_coltFanTestHotLatched = true;
+	} else if (clt <= 90.0f) {
+		g_coltFanTestHotLatched = false;
+	}
+
+	return g_coltFanTestHotLatched;
 }
 
 static bool isIgnitionOn() {
