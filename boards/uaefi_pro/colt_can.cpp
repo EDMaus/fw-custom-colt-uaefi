@@ -41,6 +41,10 @@ static bool isEngineRunning() {
 	return getCurrentRpm() > 400;
 }
 
+static bool isColtFanTestHot() {
+	return Sensor::getOrZero(SensorType::Clt) >= 95.0f;
+}
+
 static bool isIgnitionOn() {
 	return isIgnVoltage();
 }
@@ -304,7 +308,7 @@ static void sendFrame416() {
 static void sendFrame608() {
 	CanTxMessage msg(CanCategory::NBC, 0x608, 8, COLT_CAN_BUS);
 
-	if (isEngineRunning()) {
+	if (isEngineRunning() || isColtFanTestHot()) {
 		msg[0] = 0x66;
 		msg[1] = 0x00;
 		msg[2] = 0x18;
