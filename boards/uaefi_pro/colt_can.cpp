@@ -304,7 +304,7 @@ static void sendFrame312() {
 
 static void sendFrame416() {
 	CanTxMessage msg(CanCategory::NBC, 0x416, 8, COLT_CAN_BUS);
-	msg[0] = isEngineRunning() ? 0x8E : 0x75;
+	msg[0] = (isEngineRunning() || isColtFanTestHot()) ? 0x8E : 0x75;
 	msg[1] = 0x00;
 	msg[2] = 0x00;
 	msg[3] = 0x00;
