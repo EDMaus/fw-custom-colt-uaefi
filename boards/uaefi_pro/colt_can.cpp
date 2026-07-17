@@ -32,6 +32,7 @@ static uint8_t g_startupInitSequence5msTick = 0;
 static bool g_startupInitSequenceSent = false;
 static bool g_startupInitSequenceRefresh = false;
 static bool g_coltFanTestHotLatched = false;
+static bool g_coltFanRequestLatched = false;
 static bool g_wasIgnitionOn = false;
 
 static int getCurrentRpm() {
@@ -52,6 +53,18 @@ static bool isColtFanTestHot() {
 	}
 
 	return g_coltFanTestHotLatched;
+}
+
+static bool isColtFanRequestActive() {
+	const float clt = Sensor::getOrZero(SensorType::Clt);
+
+	if (clt >= 95.0f) {
+		g_coltFanRequestLatched = true;
+	} else if (clt <= 90.0f) {
+		g_coltFanRequestLatched = false;
+	}
+
+	return g_coltFanRequestLatched;
 }
 
 static bool isIgnitionOn() {
@@ -318,14 +331,15 @@ static void sendFrame608() {
 	CanTxMessage msg(CanCategory::NBC, 0x608, 8, COLT_CAN_BUS);
 
 	if (isEngineRunning() || isColtFanTestHot()) {
-		msg[0] = 0x66;
+		const bool fanRequest = isColtFanRequestActive();
+		msg[0] = fanRequest ? 0x88 : 0x66;
 		msg[1] = 0x00;
 		msg[2] = 0x18;
 		msg[3] = 0xC3;
 		msg[4] = 0xFF;
 		msg[5] = 0x00;
-		msg[6] = 0x65;
-		msg[7] = 0x00;
+		msg[6] = fanRequest ? 0x45 : 0x65;
+		msg[7] = fanRequest ? 0x01 : 0x00;
 		return;
 	}
 
